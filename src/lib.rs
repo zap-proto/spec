@@ -1,4 +1,4 @@
-//! ZAP - Zero-copy Agent Protocol
+//! ZAP - Zero-Copy App Proto
 //!
 //! High-performance Cap'n Proto RPC for AI agent communication.
 //!

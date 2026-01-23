@@ -1,5 +1,5 @@
 @0xb2a3f4c5d6e7f8a9;
-# ZAP - Zero-copy Agent Protocol
+# ZAP - Zero-Copy App Proto
 # Cap'n Proto schema for high-performance agent communication
 
 using Go = import "/go.capnp";

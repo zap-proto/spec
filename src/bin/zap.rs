@@ -5,7 +5,7 @@ use zap::{Client, Config, Result};
 
 #[derive(Parser)]
 #[command(name = "zap")]
-#[command(about = "ZAP - Zero-copy Agent Protocol CLI")]
+#[command(about = "ZAP - Zero-Copy App Proto CLI")]
 #[command(version)]
 struct Cli {
     /// Config file path

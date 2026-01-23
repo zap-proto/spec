@@ -1,6 +1,6 @@
 # hanzo-zap
 
-ZAP - Zero-copy Agent Protocol for Python
+ZAP - Zero-Copy App Proto for Python
 
 High-performance Cap'n Proto RPC for AI agent communication.
 
