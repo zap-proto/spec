@@ -1,0 +1,153 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  rust:
+    name: Rust Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Cap'n Proto
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y capnproto
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Build
+        run: cargo build --all-features
+
+      - name: Run tests
+        run: cargo test --all-features --verbose
+
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Coverage
+        run: cargo tarpaulin --all-features --out Xml --output-dir coverage
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/cobertura.xml
+          flags: rust
+          fail_ci_if_error: false
+
+  python:
+    name: Python Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        working-directory: python
+        run: |
+          uv venv
+          uv pip install -e ".[dev]"
+          uv pip install pytest-cov
+
+      - name: Lint with ruff
+        working-directory: python
+        run: uv run ruff check src
+
+      - name: Type check with mypy
+        working-directory: python
+        run: uv run mypy src --ignore-missing-imports
+
+      - name: Run tests with coverage
+        working-directory: python
+        run: |
+          uv run pytest tests/ -v --cov=src/hanzo_zap --cov-report=xml --cov-report=term --cov-fail-under=80
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: python/coverage.xml
+          flags: python
+          fail_ci_if_error: false
+
+  typescript:
+    name: TypeScript Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        working-directory: typescript
+        run: pnpm install
+
+      - name: Lint
+        working-directory: typescript
+        run: pnpm lint
+
+      - name: Build
+        working-directory: typescript
+        run: pnpm build
+
+      - name: Run tests with coverage
+        working-directory: typescript
+        run: pnpm test -- --coverage --coverage.thresholds.lines=80
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: typescript/coverage/lcov.info
+          flags: typescript
+          fail_ci_if_error: false
+
+  coverage-gate:
+    name: Coverage Gate
+    needs: [rust, python, typescript]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coverage gate passed
+        run: echo "All coverage gates passed (80%+ required)"

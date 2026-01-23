@@ -1,0 +1,63 @@
+{
+  "name": "@hanzo/zap",
+  "version": "0.2.1",
+  "description": "ZAP - Zero-copy Agent Protocol for TypeScript",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src",
+    "format": "prettier --write src"
+  },
+  "keywords": [
+    "capnproto",
+    "rpc",
+    "agents",
+    "mcp",
+    "ai",
+    "hanzo"
+  ],
+  "author": "Hanzo AI <dev@hanzo.ai>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hanzoai/zap"
+  },
+  "homepage": "https://hanzo.ai/zap",
+  "bugs": {
+    "url": "https://github.com/hanzoai/zap/issues"
+  },
+  "dependencies": {
+    "capnp-ts": "^0.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

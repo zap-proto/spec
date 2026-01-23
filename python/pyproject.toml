@@ -1,0 +1,72 @@
+[project]
+name = "hanzo-zap"
+version = "0.2.1"
+description = "ZAP - Zero-copy Agent Protocol for Python"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Hanzo AI", email = "dev@hanzo.ai" }]
+requires-python = ">=3.10"
+keywords = ["capnproto", "rpc", "agents", "mcp", "ai", "hanzo"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "pycapnp>=2.0.0",
+    "anyio>=4.0",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
+
+[project.urls]
+Homepage = "https://hanzo.ai/zap"
+Documentation = "https://hanzoai.github.io/zap/docs"
+Repository = "https://github.com/hanzoai/zap"
+
+[project.scripts]
+zap = "hanzo_zap.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hanzo_zap"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["src/hanzo_zap"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
