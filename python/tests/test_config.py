@@ -1,7 +1,7 @@
-"""Tests for hanzo_zap.config module."""
+"""Tests for zap_schema.config module."""
 
 import pytest
-from hanzo_zap.config import Config, ServerConfig, Transport
+from zap_schema.config import Config, ServerConfig, Transport
 
 
 class TestConfig:

@@ -1,0 +1,11 @@
+/Users/z/work/zap/zap/reserve/zap-protocol/target/debug/deps/capnp_futures-b989acd790a3d28c.d: /Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/lib.rs /Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/read_stream.rs /Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/serialize.rs /Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/serialize_packed.rs /Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/write_queue.rs
+
+/Users/z/work/zap/zap/reserve/zap-protocol/target/debug/deps/libcapnp_futures-b989acd790a3d28c.rlib: /Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/lib.rs /Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/read_stream.rs /Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/serialize.rs /Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/serialize_packed.rs /Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/write_queue.rs
+
+/Users/z/work/zap/zap/reserve/zap-protocol/target/debug/deps/libcapnp_futures-b989acd790a3d28c.rmeta: /Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/lib.rs /Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/read_stream.rs /Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/serialize.rs /Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/serialize_packed.rs /Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/write_queue.rs
+
+/Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/lib.rs:
+/Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/read_stream.rs:
+/Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/serialize.rs:
+/Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/serialize_packed.rs:
+/Users/z/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/capnp-futures-0.20.1/src/write_queue.rs:

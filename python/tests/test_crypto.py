@@ -1,7 +1,7 @@
-"""Tests for hanzo_zap.crypto module."""
+"""Tests for zap_schema.crypto module."""
 
 import pytest
-from hanzo_zap import crypto
+from zap_schema import crypto
 
 
 class TestHashFunctions:

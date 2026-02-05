@@ -555,7 +555,8 @@ pub use pq_impl::{
     HybridSharedSecret, PQKeyExchange, PQSignature,
 };
 
-// Stub implementations when pq feature is not enabled
+// Feature-gated fallbacks when pq feature is not enabled
+// These types exist for API compatibility but return errors on use
 #[cfg(not(feature = "pq"))]
 pub struct PQKeyExchange;
 

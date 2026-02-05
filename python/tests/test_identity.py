@@ -1,7 +1,7 @@
-"""Tests for hanzo_zap.identity module."""
+"""Tests for zap_schema.identity module."""
 
 import pytest
-from hanzo_zap.identity import (
+from zap_schema.identity import (
     Did,
     DidDocument,
     DidMethod,

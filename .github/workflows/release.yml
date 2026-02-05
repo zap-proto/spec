@@ -1,0 +1,326 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS
+          - target: aarch64-apple-darwin
+            os: macos-14
+            platform: darwin-arm64
+          - target: x86_64-apple-darwin
+            os: macos-13
+            platform: darwin-x64
+
+          # Linux
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            platform: linux-arm64
+            cross: true
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            platform: linux-x64
+
+          # Windows
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            platform: win32-x64
+            ext: .exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross (for cross-compilation)
+        if: matrix.cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build binary
+        run: |
+          if [ "${{ matrix.cross }}" = "true" ]; then
+            cross build --release --target ${{ matrix.target }} --bin zapc
+          else
+            cargo build --release --target ${{ matrix.target }} --bin zapc
+          fi
+        shell: bash
+
+      - name: Package binary
+        run: |
+          mkdir -p dist
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp target/${{ matrix.target }}/release/zapc.exe dist/zapc-${{ matrix.platform }}.exe
+          else
+            cp target/${{ matrix.target }}/release/zapc dist/zapc-${{ matrix.platform }}
+            chmod +x dist/zapc-${{ matrix.platform }}
+          fi
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zapc-${{ matrix.platform }}
+          path: dist/zapc-${{ matrix.platform }}${{ matrix.ext }}
+
+  # Create npm platform packages
+  npm-packages:
+    name: Create npm packages
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create platform packages
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Function to create platform package
+          create_package() {
+            local platform=$1
+            local binary=$2
+
+            mkdir -p "npm-packages/@zap-proto/zapc-${platform}/bin"
+
+            cat > "npm-packages/@zap-proto/zapc-${platform}/package.json" << EOF
+          {
+            "name": "@zap-proto/zapc-${platform}",
+            "version": "${VERSION}",
+            "description": "ZAP Schema Compiler binary for ${platform}",
+            "license": "Apache-2.0",
+            "repository": {
+              "type": "git",
+              "url": "git+https://github.com/zap-proto/zap.git"
+            },
+            "os": ["$(echo $platform | cut -d- -f1)"],
+            "cpu": ["$(echo $platform | cut -d- -f2)"],
+            "files": ["bin"]
+          }
+          EOF
+
+            cp "artifacts/zapc-${platform}/${binary}" "npm-packages/@zap-proto/zapc-${platform}/bin/"
+            chmod +x "npm-packages/@zap-proto/zapc-${platform}/bin/${binary}"
+          }
+
+          create_package "darwin-arm64" "zapc-darwin-arm64"
+          create_package "darwin-x64" "zapc-darwin-x64"
+          create_package "linux-arm64" "zapc-linux-arm64"
+          create_package "linux-x64" "zapc-linux-x64"
+          create_package "win32-x64" "zapc-win32-x64.exe"
+
+          # Rename binaries to just 'zapc' (or 'zapc.exe')
+          for pkg in npm-packages/@zap-proto/zapc-*/bin/*; do
+            dir=$(dirname "$pkg")
+            if [[ "$pkg" == *.exe ]]; then
+              mv "$pkg" "$dir/zapc.exe"
+            else
+              mv "$pkg" "$dir/zapc"
+            fi
+          done
+
+      - name: Update main package version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cd npm
+          node -e "
+            const pkg = require('./package.json');
+            pkg.version = '${VERSION}';
+            for (const dep of Object.keys(pkg.optionalDependencies || {})) {
+              pkg.optionalDependencies[dep] = '${VERSION}';
+            }
+            require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+          "
+
+      - name: Publish platform packages
+        run: |
+          for pkg in npm-packages/@zap-proto/zapc-*; do
+            cd "$pkg"
+            npm publish --access public || true
+            cd -
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish main package
+        run: |
+          cd npm
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # Create GitHub release
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release
+          for dir in artifacts/zapc-*; do
+            for file in "$dir"/*; do
+              cp "$file" release/
+            done
+          done
+          ls -la release/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: ZAP v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: release/*
+          body: |
+            ## ZAP v${{ steps.version.outputs.version }}
+
+            ### Installation
+
+            **npm (recommended)**
+            ```bash
+            npm install -g @zap-proto/zapc
+            ```
+
+            **Cargo**
+            ```bash
+            cargo install zap-proto
+            ```
+
+            **Direct download**
+            Download the appropriate binary for your platform from the assets below.
+
+            ### Changes
+            See [CHANGELOG.md](https://github.com/zap-proto/zap/blob/main/CHANGELOG.md) for details.
+
+  # Publish to crates.io (main crate and aliases)
+  crates:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Publish zap-schema (main crate)
+        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true
+
+      - name: Publish zap-proto alias
+        working-directory: reserve/zap-proto
+        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true
+
+      - name: Publish zap-protocol alias
+        working-directory: reserve/zap-protocol
+        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        continue-on-error: true
+
+  # Publish to PyPI (main package and aliases)
+  pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update version in pyproject.toml files
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          sed -i "s/version = \".*\"/version = \"${VERSION}\"/" python/pyproject.toml
+          sed -i "s/version = \".*\"/version = \"${VERSION}\"/" reserve/zap-proto-py/pyproject.toml
+          sed -i "s/version = \".*\"/version = \"${VERSION}\"/" reserve/zap-protocol-py/pyproject.toml
+
+      - name: Build and publish zap-schema
+        working-directory: python
+        run: |
+          uv build
+          uv publish --token ${{ secrets.PYPI_TOKEN }}
+        continue-on-error: true
+
+      - name: Build and publish zap-proto
+        working-directory: reserve/zap-proto-py
+        run: |
+          uv build
+          uv publish --token ${{ secrets.PYPI_TOKEN }}
+        continue-on-error: true
+
+      - name: Build and publish zap-protocol
+        working-directory: reserve/zap-protocol-py
+        run: |
+          uv build
+          uv publish --token ${{ secrets.PYPI_TOKEN }}
+        continue-on-error: true

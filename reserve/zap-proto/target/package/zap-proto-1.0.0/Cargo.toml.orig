@@ -1,0 +1,17 @@
+[workspace]
+
+[package]
+name = "zap-proto"
+version = "1.0.0"
+edition = "2021"
+description = "ZAP - Zero-copy Application Protocol for AI agent communication. See zap-schema for the main crate."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/zap-protocol/zap"
+homepage = "https://zap-protocol.github.io/zap"
+documentation = "https://docs.rs/zap-schema"
+keywords = ["zap", "rpc", "capnproto", "mcp", "ai-agents"]
+categories = ["network-programming", "encoding", "development-tools"]
+readme = "README.md"
+
+[dependencies]
+zap = { package = "zap-schema", version = "1.0" }
