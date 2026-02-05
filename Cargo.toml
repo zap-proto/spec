@@ -86,17 +86,32 @@ sha2 = { version = "0.10", optional = true }
 rand = { version = "0.8", optional = true }
 zeroize = { version = "1.7", optional = true }
 
+# gRPC/Protobuf (optional, requires 'grpc' feature)
+# NOTE: Only compiled when +grpc feature is enabled
+tonic = { version = "0.12", optional = true }
+prost = { version = "0.13", optional = true }
+prost-types = { version = "0.13", optional = true }
+
 [dev-dependencies]
 tempfile = "3"
 tokio-test = "0.4"
+criterion = { version = "0.5", features = ["html_reports"] }
 
 [build-dependencies]
 capnpc = "0.20"
+tonic-build = { version = "0.12", optional = true }
+prost-build = { version = "0.13", optional = true }
+
+[[bench]]
+name = "zap_vs_grpc"
+harness = false
 
 [features]
-default = []
+default = ["pq"]  # Post-quantum crypto always enabled
 mcp = ["reqwest", "async-trait"]
 pq = ["pqcrypto-mlkem", "pqcrypto-dilithium", "pqcrypto-traits", "x25519-dalek", "hkdf", "sha2", "rand", "zeroize"]
+grpc = ["tonic", "prost", "prost-types"]
+full = ["mcp", "pq", "grpc"]
 
 [profile.release]
 lto = true
