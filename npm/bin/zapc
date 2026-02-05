@@ -1,0 +1,67 @@
+#!/usr/bin/env node
+
+/**
+ * ZAP Schema Compiler (zapc) CLI wrapper
+ *
+ * This script executes the platform-specific binary.
+ */
+
+const { spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+
+const BIN_NAME = process.platform === 'win32' ? 'zapc.exe' : 'zapc';
+
+// Try to find the binary
+function findBinary() {
+  // Check same directory as this script
+  const localBin = path.join(__dirname, BIN_NAME);
+  if (fs.existsSync(localBin)) {
+    return localBin;
+  }
+
+  // Check platform-specific optional packages
+  const platformKey = `${process.platform}-${process.arch}`;
+  const packageName = `@aspect-dev/zapc-${platformKey}`;
+
+  try {
+    const packagePath = require.resolve(`${packageName}/package.json`);
+    const packageDir = path.dirname(packagePath);
+    const packageBin = path.join(packageDir, 'bin', BIN_NAME);
+    if (fs.existsSync(packageBin)) {
+      return packageBin;
+    }
+  } catch (e) {
+    // Package not found
+  }
+
+  return null;
+}
+
+const binary = findBinary();
+
+if (!binary) {
+  console.error('Error: zapc binary not found!');
+  console.error('');
+  console.error('Please try reinstalling:');
+  console.error('  npm uninstall @aspect-dev/zapc && npm install @aspect-dev/zapc');
+  console.error('');
+  console.error('Or install from source:');
+  console.error('  cargo install --path . --bin zapc');
+  process.exit(1);
+}
+
+// Execute the binary with all arguments passed through
+const proc = spawn(binary, process.argv.slice(2), {
+  stdio: 'inherit',
+  env: process.env,
+});
+
+proc.on('error', (err) => {
+  console.error(`Failed to execute zapc: ${err.message}`);
+  process.exit(1);
+});
+
+proc.on('close', (code) => {
+  process.exit(code || 0);
+});

@@ -509,7 +509,7 @@ pub struct NodeIdentity {
     signer: Option<PQSignature>,
 
     #[cfg(not(feature = "pq"))]
-    /// Placeholder for when pq feature is disabled
+    /// PhantomData field for when pq feature is disabled
     _signer: std::marker::PhantomData<()>,
 }
 
@@ -544,7 +544,9 @@ impl NodeIdentity {
         })
     }
 
-    /// Generate a new node identity (stub when pq feature is disabled)
+    /// Generate a new node identity
+    ///
+    /// Returns an error when pq feature is disabled.
     #[cfg(not(feature = "pq"))]
     pub fn generate() -> Result<Self> {
         Err(Error::Identity(
@@ -562,7 +564,9 @@ impl NodeIdentity {
         signer.sign(message)
     }
 
-    /// Sign a message (stub when pq feature is disabled)
+    /// Sign a message with this node's private key
+    ///
+    /// Returns an error when pq feature is disabled.
     #[cfg(not(feature = "pq"))]
     pub fn sign(&self, _message: &[u8]) -> Result<Vec<u8>> {
         Err(Error::Identity(
@@ -583,7 +587,9 @@ impl NodeIdentity {
         Ok(verifier)
     }
 
-    /// Verify a signature (stub when pq feature is disabled)
+    /// Verify a signature against this node's public key
+    ///
+    /// Returns an error when pq feature is disabled.
     #[cfg(not(feature = "pq"))]
     pub fn verify(&self, _message: &[u8], _signature: &[u8]) -> Result<()> {
         Err(Error::Identity(

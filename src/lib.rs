@@ -23,6 +23,12 @@
 //! }
 //! ```
 
+// Generated Cap'n Proto bindings - must be at crate root for correct module path
+#[allow(dead_code, clippy::all)]
+pub mod zap_capnp {
+    include!(concat!(env!("OUT_DIR"), "/zap_capnp.rs"));
+}
+
 pub mod client;
 pub mod server;
 pub mod gateway;
@@ -33,6 +39,7 @@ pub mod crypto;
 pub mod consensus;
 pub mod identity;
 pub mod agent_consensus;
+pub mod schema;
 
 pub use client::Client;
 pub use server::Server;
@@ -42,6 +49,7 @@ pub use config::Config;
 pub use consensus::{RingtailConsensus, AgentConsensus, RingtailSignature, Round1Output, Round2Output};
 pub use identity::{Did, DidMethod, DidDocument, VerificationMethod, Service, NodeIdentity, StakeRegistry};
 pub use agent_consensus::{AgentConsensusVoting, Query, Response, ConsensusResult, QueryId, ResponseId};
+pub use schema::{ZapSchema, SchemaFormat, transpile, transpile_str, compile_to_rust, capnp_to_zap, migrate_capnp_to_zap};
 
 /// ZAP protocol version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

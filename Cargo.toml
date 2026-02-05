@@ -1,18 +1,18 @@
 [workspace]
 
 [package]
-name = "hanzo-zap"
-version = "0.2.1"
+name = "zap-schema"
+version = "1.0.0"
 edition = "2021"
 rust-version = "1.75"
 authors = ["Hanzo AI <dev@hanzo.ai>"]
-description = "ZAP - Zero-Copy App Proto"
+description = "ZAP Schema Compiler - Zero-Copy Application Protocol with whitespace-significant syntax"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/hanzoai/zap"
-homepage = "https://hanzo.ai/zap"
-documentation = "https://hanzoai.github.io/zap/docs"
-keywords = ["capnproto", "rpc", "agents", "mcp", "ai"]
-categories = ["network-programming", "development-tools"]
+repository = "https://github.com/zap-proto/zap"
+homepage = "https://zap-proto.github.io/zap"
+documentation = "https://zap-proto.github.io/zap/docs"
+keywords = ["capnproto", "rpc", "schema", "serialization", "zero-copy"]
+categories = ["development-tools", "encoding", "parser-implementations"]
 readme = "README.md"
 
 [lib]
@@ -22,6 +22,10 @@ path = "src/lib.rs"
 [[bin]]
 name = "zap"
 path = "src/bin/zap.rs"
+
+[[bin]]
+name = "zapc"
+path = "src/bin/zapc.rs"
 
 [[bin]]
 name = "zapd"
@@ -63,9 +67,11 @@ hex = "0.4"
 hyper = { version = "1", features = ["full"] }
 hyper-util = { version = "0.1", features = ["full"] }
 http-body-util = "0.1"
-tokio-tungstenite = "0.24"
-tokio-util = { version = "0.7", features = ["codec"] }
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+tokio-util = { version = "0.7", features = ["codec", "compat"] }
 url = "2"
+reqwest = { version = "0.12", features = ["json", "stream"], optional = true }
+async-trait = { version = "0.1", optional = true }
 
 # Config
 directories = "5"
@@ -89,7 +95,7 @@ capnpc = "0.20"
 
 [features]
 default = []
-mcp = []
+mcp = ["reqwest", "async-trait"]
 pq = ["pqcrypto-mlkem", "pqcrypto-dilithium", "pqcrypto-traits", "x25519-dalek", "hkdf", "sha2", "rand", "zeroize"]
 
 [profile.release]

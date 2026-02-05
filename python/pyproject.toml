@@ -1,14 +1,14 @@
 [project]
-name = "hanzo-zap"
-version = "0.2.1"
-description = "ZAP - Zero-Copy App Proto for Python"
+name = "zap-schema"
+version = "1.0.0"
+description = "ZAP - Zero-Copy Application Protocol for AI agent communication"
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "Hanzo AI", email = "dev@hanzo.ai" }]
 requires-python = ">=3.10"
-keywords = ["capnproto", "rpc", "agents", "mcp", "ai", "hanzo"]
+keywords = ["zap", "capnproto", "rpc", "mcp", "ai-agents", "protocol"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -16,6 +16,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries",
+    "Topic :: System :: Networking",
 ]
 dependencies = [
     "pycapnp>=2.0.0",
@@ -33,19 +34,19 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://hanzo.ai/zap"
-Documentation = "https://hanzoai.github.io/zap/docs"
-Repository = "https://github.com/hanzoai/zap"
+Homepage = "https://zap-proto.github.io/zap"
+Documentation = "https://zap-proto.github.io/zap/docs"
+Repository = "https://github.com/zap-proto/zap"
 
 [project.scripts]
-zap = "hanzo_zap.cli:main"
+zap = "zap_schema.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/hanzo_zap"]
+packages = ["src/zap_schema"]
 
 [tool.ruff]
 line-length = 100
@@ -64,7 +65,7 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 
 [tool.coverage.run]
-source = ["src/hanzo_zap"]
+source = ["src/zap_schema"]
 branch = true
 
 [tool.coverage.report]

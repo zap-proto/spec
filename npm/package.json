@@ -1,0 +1,57 @@
+{
+  "name": "@hanzo-ai/zapc",
+  "version": "1.0.0",
+  "description": "ZAP Schema Compiler - Zero-copy Application Protocol schema language",
+  "keywords": [
+    "zap",
+    "hanzo",
+    "schema",
+    "compiler",
+    "rpc",
+    "zero-copy",
+    "serialization",
+    "code-generation",
+    "ai",
+    "agents"
+  ],
+  "author": "Hanzo AI <dev@hanzo.ai>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zap-proto/zap.git"
+  },
+  "homepage": "https://zap-proto.github.io/zap",
+  "bugs": {
+    "url": "https://github.com/zap-proto/zap/issues"
+  },
+  "bin": {
+    "zapc": "bin/zapc"
+  },
+  "files": [
+    "bin",
+    "scripts",
+    "README.md"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/install.js"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "optionalDependencies": {
+    "@hanzo-ai/zapc-darwin-arm64": "1.0.0",
+    "@hanzo-ai/zapc-darwin-x64": "1.0.0",
+    "@hanzo-ai/zapc-linux-arm64": "1.0.0",
+    "@hanzo-ai/zapc-linux-x64": "1.0.0",
+    "@hanzo-ai/zapc-win32-x64": "1.0.0"
+  }
+}

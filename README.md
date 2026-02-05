@@ -1,118 +1,259 @@
 # ZAP - Zero-Copy App Proto
 
-High-performance Cap'n Proto RPC for AI agent communication.
+<p align="center">
+  <strong>High-performance zero-copy RPC for AI agent communication</strong>
+</p>
 
-ZAP provides a unified protocol for connecting to and aggregating MCP (Model Context Protocol) servers, enabling efficient tool calling, resource access, and prompt management for AI agents.
+<p align="center">
+  <a href="https://crates.io/crates/zap-proto"><img src="https://img.shields.io/crates/v/zap-schema.svg" alt="crates.io"></a>
+  <a href="https://www.npmjs.com/package/@zap-proto/zapc"><img src="https://img.shields.io/npm/v/@zap-proto/zapc.svg" alt="npm"></a>
+  <a href="https://pypi.org/project/zap-proto/"><img src="https://img.shields.io/pypi/v/zap-schema.svg" alt="PyPI"></a>
+  <a href="https://github.com/hanzo-ai/zap/actions"><img src="https://github.com/hanzo-ai/zap/workflows/CI/badge.svg" alt="CI"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg" alt="License"></a>
+</p>
 
-**"Infinity Times Faster"** - When decode time is zero, the speedup is mathematically infinite.
+---
 
-## Features
+ZAP is a high-performance zero-copy RPC protocol designed for AI agent communication, built by [Hanzo AI](https://hanzo.ai). It provides:
 
-- **Zero-copy Serialization**: Cap'n Proto wire format = memory format
-- **Promise Pipelining**: N dependent calls in 1 round trip
-- **Capability Security**: Possession = permission, no ambient authority
-- **Multi-transport**: Unix sockets, TCP, TLS, QUIC, WebSocket, shared memory
-- **MCP Gateway**: Aggregate multiple MCP servers behind a single endpoint
-- **Agent Consensus**: Built-in metastable voting for multi-agent coordination
-- **Post-Quantum Ready**: ML-KEM-768, ML-DSA-65, Ringtail signatures
-- **Cross-language**: 17 language bindings
+- **Clean Schema Language** - Whitespace-significant syntax that's easy to read and write
+- **Zero-copy Serialization** - Minimal overhead binary format
+- **Multi-transport** - TCP, Unix sockets, WebSocket, UDP, HTTP/SSE, Stdio
+- **MCP Gateway** - Aggregate multiple MCP servers behind a single endpoint
+- **Post-Quantum Crypto** - ML-KEM and ML-DSA for future-proof security
+- **Agent Consensus** - Trustless voting for distributed AI systems
+- **Cross-language** - Rust, Python, TypeScript, Go, C/C++
 
-## Official Packages
+## Installation
 
-| Package | Language | Install |
-|---------|----------|---------|
-| `zap-protocol` | Rust | `cargo add zap-protocol` |
-| `zap-protocol` | Python | `pip install zap-protocol` |
-| `@zap-protocol/zap` | TypeScript | `npm install @zap-protocol/zap` |
-| `zap-protocol/zap-go` | Go | `go get github.com/zap-protocol/zap-go` |
+### Schema Compiler (zapc)
 
-## Language Bindings
+```bash
+# npm (recommended)
+npm install -g @zap-proto/zapc
 
-All language bindings are maintained in the [zap-protocol](https://github.com/zap-protocol) GitHub organization:
+# Cargo
+cargo install zap-schema --bin zapc
 
-| Language | Repository | Status |
-|----------|------------|--------|
-| **Rust** | [zap-protocol/zap](https://github.com/zap-protocol/zap) | Production |
-| **Go** | [zap-protocol/zap-go](https://github.com/zap-protocol/zap-go) | Production |
-| **Python** | [zap-protocol/zap-py](https://github.com/zap-protocol/zap-py) | Production |
-| **JavaScript/TypeScript** | [zap-protocol/zap-js](https://github.com/zap-protocol/zap-js) | Production |
-| **C++** | [zap-protocol/zap-cpp](https://github.com/zap-protocol/zap-cpp) | Stable |
-| **C** | [zap-protocol/zap-c](https://github.com/zap-protocol/zap-c) | Stable |
-| **C#** | [zap-protocol/zap-cs](https://github.com/zap-protocol/zap-cs) | Development |
-| **Java** | [zap-protocol/zap-java](https://github.com/zap-protocol/zap-java) | Development |
-| **Haskell** | [zap-protocol/zap-haskell](https://github.com/zap-protocol/zap-haskell) | Development |
-| **OCaml** | [zap-protocol/zap-ocaml](https://github.com/zap-protocol/zap-ocaml) | Development |
-| **Erlang** | [zap-protocol/zap-erlang](https://github.com/zap-protocol/zap-erlang) | Development |
-| **D** | [zap-protocol/zap-d](https://github.com/zap-protocol/zap-d) | Development |
-| **Lua** | [zap-protocol/zap-lua](https://github.com/zap-protocol/zap-lua) | Development |
-| **Nim** | [zap-protocol/zap-nim](https://github.com/zap-protocol/zap-nim) | Development |
-| **Ruby** | [zap-protocol/zap-ruby](https://github.com/zap-protocol/zap-ruby) | Development |
-| **Scala** | [zap-protocol/zap-scala](https://github.com/zap-protocol/zap-scala) | Development |
+# Or use npx without installing
+npx @zap-proto/zapc --help
+```
+
+### Runtime Libraries
+
+| Language | Package | Install |
+|----------|---------|---------|
+| Rust | `zap-proto` | `cargo add zap-proto` |
+| Python | `zap-proto` | `pip install zap-proto` |
+| TypeScript | `@zap-proto/zap` | `npm install @zap-proto/zap` |
+| Go | `github.com/hanzo-ai/zap` | `go get github.com/hanzo-ai/zap` |
+
+## ZAP Schema Language
+
+ZAP uses a clean, whitespace-significant syntax:
+
+```zap
+# person.zap - Clean and minimal schema definition
+
+struct Person
+  name Text
+  email Text
+  age UInt32
+  phones List(PhoneNumber)
+
+  struct PhoneNumber
+    number Text
+    type Type
+
+    enum Type
+      mobile
+      home
+      work
+
+interface PersonService
+  create (person Person) -> (id Text)
+  get (id Text) -> (person Person)
+  list () -> (people List(Person))
+  search (query Text) -> (results List(Person))
+  delete (id Text) -> (success Bool)
+```
+
+### Compile Schema
+
+```bash
+# Compile to ZAP binary format
+zapc compile person.zap --out person.zapb
+
+# Generate Rust code
+zapc generate person.zap --lang rust --out ./gen/
+
+# Generate for multiple languages
+zapc generate person.zap --lang go --out ./gen/go/
+zapc generate person.zap --lang ts --out ./gen/ts/
+zapc generate person.zap --lang python --out ./gen/python/
+
+# Validate schema
+zapc check person.zap
+
+# Format schema
+zapc fmt person.zap --write
+```
 
 ## Quick Start
 
 ### Rust
 
 ```rust
-use zap_protocol::{Client, Gateway};
+use zap::{Client, Result};
+use serde_json::json;
 
-// Connect to a ZAP gateway
-let client = Client::connect("zap://localhost:9999").await?;
+#[tokio::main]
+async fn main() -> Result<()> {
+    // Connect to a ZAP gateway
+    let client = Client::connect("zap://localhost:9999").await?;
 
-// List available tools
-let tools = client.list_tools().await?;
+    // List available tools
+    let tools = client.list_tools().await?;
+    println!("Available tools: {:?}", tools);
 
-// Call a tool
-let result = client.call_tool("search", json!({"query": "hello"})).await?;
-```
+    // Call a tool
+    let result = client.call_tool("search", json!({
+        "query": "machine learning"
+    })).await?;
+    println!("Result: {:?}", result);
 
-### Go
+    // Read a resource
+    let content = client.read_resource("file:///data/config.json").await?;
+    println!("Content: {:?}", content);
 
-```go
-import "github.com/zap-protocol/zap-go"
-
-// Connect to a ZAP gateway
-client, err := zap.Connect("zap://localhost:9999")
-
-// List available tools
-tools, err := client.ListTools(ctx)
-
-// Call a tool
-result, err := client.CallTool(ctx, "search", map[string]any{"query": "hello"})
+    Ok(())
+}
 ```
 
 ### Python
 
 ```python
-from zap import ZAP
+import asyncio
+from zap_proto import Client
 
-# FastMCP-style decorator API
-zap = ZAP("my-agent")
+async def main():
+    # Connect to a ZAP gateway
+    client = await Client.connect("zap://localhost:9999")
 
-@zap.tool
-def search(query: str) -> str:
-    """Search for information."""
-    return f"Results for: {query}"
+    # List available tools
+    tools = await client.list_tools()
+    print(f"Available tools: {tools}")
 
-# Or connect as client
-from zap import Client
-client = await Client.connect("zap://localhost:9999")
-tools = await client.list_tools()
+    # Call a tool
+    result = await client.call_tool("search", {
+        "query": "machine learning"
+    })
+    print(f"Result: {result}")
+
+    # Read a resource
+    content = await client.read_resource("file:///data/config.json")
+    print(f"Content: {content}")
+
+asyncio.run(main())
 ```
 
 ### TypeScript
 
 ```typescript
-import { Client, Gateway } from '@zap-protocol/zap';
+import { Client } from '@zap-proto/zap';
 
-// Connect to a ZAP gateway
-const client = await Client.connect('zap://localhost:9999');
+async function main() {
+  // Connect to a ZAP gateway
+  const client = await Client.connect('zap://localhost:9999');
 
-// List available tools
-const tools = await client.listTools();
+  // List available tools
+  const tools = await client.listTools();
+  console.log('Available tools:', tools);
 
-// Call a tool
-const result = await client.callTool('search', { query: 'hello' });
+  // Call a tool
+  const result = await client.callTool('search', {
+    query: 'machine learning'
+  });
+  console.log('Result:', result);
+
+  // Read a resource
+  const content = await client.readResource('file:///data/config.json');
+  console.log('Content:', content);
+}
+
+main();
+```
+
+### Go
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    "github.com/hanzo-ai/zap"
+)
+
+func main() {
+    ctx := context.Background()
+
+    // Connect to a ZAP gateway
+    client, err := zap.Connect(ctx, "zap://localhost:9999")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer client.Close()
+
+    // List available tools
+    tools, err := client.ListTools(ctx)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Available tools: %v\n", tools)
+
+    // Call a tool
+    result, err := client.CallTool(ctx, "search", map[string]any{
+        "query": "machine learning",
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Result: %v\n", result)
+}
+```
+
+### C
+
+```c
+#include <zap/zap.h>
+#include <stdio.h>
+
+int main() {
+    // Connect to a ZAP gateway
+    zap_client_t* client = zap_connect("zap://localhost:9999");
+    if (!client) {
+        fprintf(stderr, "Failed to connect\n");
+        return 1;
+    }
+
+    // List available tools
+    zap_tool_list_t* tools = zap_list_tools(client);
+    printf("Found %zu tools\n", tools->count);
+
+    // Call a tool
+    zap_result_t* result = zap_call_tool(client, "search",
+        "{\"query\": \"machine learning\"}");
+    printf("Result: %s\n", result->content);
+
+    // Cleanup
+    zap_free_result(result);
+    zap_free_tool_list(tools);
+    zap_disconnect(client);
+    return 0;
+}
 ```
 
 ## CLI Tools
@@ -131,6 +272,28 @@ zap resources list
 
 # Read a resource
 zap read file:///path/to/file
+
+# Get a prompt
+zap prompt get code-review --file main.rs
+```
+
+### zapc - Schema Compiler
+
+```bash
+# Compile ZAP schema
+zapc compile schema.zap
+
+# Generate code for a language
+zapc generate schema.zap --lang rust --out ./gen/
+
+# Validate a schema
+zapc check schema.zap
+
+# Format a schema
+zapc fmt schema.zap --write
+
+# Show version
+zapc version
 ```
 
 ### zapd - Gateway Daemon
@@ -153,6 +316,13 @@ listen = "0.0.0.0"
 port = 9999
 log_level = "info"
 
+# Post-quantum security (optional)
+[security]
+pq_enabled = true
+key_exchange = "ml-kem-768"
+signature = "ml-dsa-65"
+
+# MCP Server connections
 [[servers]]
 name = "filesystem"
 transport = "stdio"
@@ -168,6 +338,101 @@ url = "http://localhost:8080/mcp"
 name = "search"
 transport = "websocket"
 url = "ws://localhost:9000/ws"
+
+[[servers]]
+name = "realtime"
+transport = "udp"
+url = "udp://localhost:5000"
+```
+
+## Schema Syntax Reference
+
+### Types
+
+```zap
+struct Example
+  # Primitives
+  flag Bool
+  count Int32
+  amount Float64
+  name Text
+  data Data
+
+  # Collections
+  items List(Text)
+  mapping Map(Text, Int32)
+
+  # Optional
+  maybe Text?
+
+  # Default values
+  status Text = "pending"
+  retries UInt32 = 3
+```
+
+### Enums
+
+```zap
+enum Status
+  pending
+  active
+  completed
+  failed
+```
+
+### Unions
+
+```zap
+struct Message
+  union content
+    text Text
+    image Data
+    file FileRef
+```
+
+### Interfaces
+
+```zap
+interface Service
+  # Simple method
+  ping () -> ()
+
+  # With parameters
+  greet (name Text) -> (greeting Text)
+
+  # Complex types
+  process (input Data, options Options) -> (result Result, stats Stats)
+
+  # Streaming (indicated by List return)
+  subscribe (topic Text) -> (events List(Event))
+```
+
+### Nested Types
+
+```zap
+struct Outer
+  inner Inner
+  items List(Item)
+
+  struct Inner
+    value Int32
+
+  struct Item
+    name Text
+    data Data
+
+  enum ItemType
+    typeA
+    typeB
+```
+
+### Imports
+
+```zap
+using import "common.zap"
+
+struct MyStruct
+  common CommonType  # From imported schema
 ```
 
 ## Architecture
@@ -177,51 +442,82 @@ url = "ws://localhost:9000/ws"
 │                        AI Client                            │
 │                    (Claude, GPT, etc.)                      │
 └──────────────────────────┬──────────────────────────────────┘
-                           │
-                           │ ZAP Protocol (Cap'n Proto RPC)
-                           │
+                           │ ZAP Protocol (Zero-copy RPC)
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                      ZAP Gateway                            │
-│                                                             │
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │                  Server Registry                      │  │
 │  │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  │  │
 │  │  │Server A │  │Server B │  │Server C │  │Server D │  │  │
 │  │  └────┬────┘  └────┬────┘  └────┬────┘  └────┬────┘  │  │
 │  └───────┼────────────┼────────────┼────────────┼───────┘  │
-│          │            │            │            │          │
 └──────────┼────────────┼────────────┼────────────┼──────────┘
-           │            │            │            │
            ▼            ▼            ▼            ▼
       ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐
-      │ stdio  │   │  HTTP  │   │  WS    │   │ Unix   │
-      │ MCP    │   │  MCP   │   │  MCP   │   │ Socket │
-      │ Server │   │ Server │   │ Server │   │ Server │
+      │ stdio  │   │  HTTP  │   │  WS    │   │  UDP   │
+      │  MCP   │   │  SSE   │   │  MCP   │   │Realtime│
       └────────┘   └────────┘   └────────┘   └────────┘
 ```
 
-## Protocol
+## Transport Protocols
 
-ZAP uses Cap'n Proto for efficient serialization and RPC:
+| Scheme | Transport | Use Case |
+|--------|-----------|----------|
+| `zap://` | TCP | Default ZAP RPC |
+| `tcp://` | TCP | Explicit TCP transport |
+| `unix://` | Unix Socket | Local IPC (Unix only) |
+| `ws://` | WebSocket | Browser/cloud connectivity |
+| `wss://` | WebSocket+TLS | Secure browser/cloud |
+| `stdio://` | Stdio | MCP subprocess servers |
+| `http://` | HTTP/SSE | Remote MCP servers |
+| `https://` | HTTPS/SSE | Secure remote MCP |
+| `udp://` | UDP | Low-latency fire-and-forget |
 
-```capnp
-interface Zap {
-  # Server discovery
-  initialize @0 (info :ServerInfo) -> (info :ServerInfo);
+## Security Features
 
-  # Tools
-  listTools @1 () -> (tools :List(Tool));
-  callTool @2 (name :Text, arguments :Text) -> (result :ToolResult);
+### Post-Quantum Cryptography
 
-  # Resources
-  listResources @3 () -> (resources :List(Resource));
-  readResource @4 (uri :Text) -> (content :ResourceContent);
+ZAP supports NIST-approved post-quantum algorithms:
 
-  # Prompts
-  listPrompts @5 () -> (prompts :List(Prompt));
-  getPrompt @6 (name :Text, arguments :Text) -> (messages :List(PromptMessage));
-}
+- **ML-KEM-768** (FIPS 203) - Key encapsulation for key exchange
+- **ML-DSA-65** (FIPS 204) - Digital signatures for authentication
+- **Hybrid Mode** - X25519 + ML-KEM for defense in depth
+
+### Agent Consensus
+
+Trustless distributed voting for AI agent responses:
+
+```rust
+use zap::consensus::{AgentConsensus, Query};
+
+let consensus = AgentConsensus::new(threshold: 0.67);
+
+// Submit responses from multiple agents
+consensus.submit_response(agent_a_did, response_a).await?;
+consensus.submit_response(agent_b_did, response_b).await?;
+consensus.submit_response(agent_c_did, response_c).await?;
+
+// Get consensus result
+let result = consensus.finalize().await?;
+```
+
+### Decentralized Identity (DID)
+
+W3C-compliant decentralized identifiers:
+
+```rust
+use zap::identity::{NodeIdentity, Did};
+
+// Generate identity with ML-DSA keys
+let identity = NodeIdentity::generate()?;
+
+// Create DID
+let did = Did::from_mldsa_key(&identity.public_key)?;
+// did:key:z6Mk...
+
+// Sign messages
+let signature = identity.sign(message)?;
 ```
 
 ## Development
@@ -229,47 +525,53 @@ interface Zap {
 ### Rust
 
 ```bash
-cd /path/to/hanzo-zap
-cargo build
-cargo test
+# Clone
+git clone https://github.com/hanzo-ai/zap
+cd zap
+
+# Build
+cargo build --all-features
+
+# Test
+cargo test --all-features --lib
+
+# Run schema compiler
+cargo run --bin zapc -- --help
 ```
 
 ### Python
 
 ```bash
-cd /path/to/hanzo-zap/python
-uv sync
-uv run pytest
+cd python
+uv venv && uv pip install -e ".[dev]"
+uv run pytest tests/ -v
 ```
 
 ### TypeScript
 
 ```bash
-cd /path/to/hanzo-zap/typescript
-npm install
-npm run build
-npm test
+cd typescript
+pnpm install
+pnpm build
+pnpm test
 ```
 
-## Tools
+## Examples
 
-| Tool | Repository | Description |
-|------|------------|-------------|
-| **VS Code** | [zap-protocol/zap-vscode](https://github.com/zap-protocol/zap-vscode) | VS Code extension |
-| **Vim** | [zap-protocol/zap-vim](https://github.com/zap-protocol/zap-vim) | Vim plugin |
-| **IntelliJ** | [zap-protocol/zap-intellij](https://github.com/zap-protocol/zap-intellij) | JetBrains plugin |
-| **LSP** | [zap-protocol/zap-lsp](https://github.com/zap-protocol/zap-lsp) | Language server |
-| **Wireshark** | [zap-protocol/zap-wireshark](https://github.com/zap-protocol/zap-wireshark) | Protocol dissector |
+See the [`examples/`](./examples/) directory for complete examples:
+
+- `addressbook/` - Basic CRUD with nested types
+- `chat/` - Real-time messaging with WebSocket
+- `agents/` - Multi-agent consensus voting
+- `gateway/` - MCP server aggregation
+- `pq-secure/` - Post-quantum encrypted communication
 
 ## Documentation
 
-Full documentation available at: https://zap.hanzo.ai
-
-- [Quick Start](https://zap.hanzo.ai/docs/quickstart)
-- [Architecture](https://zap.hanzo.ai/docs/architecture)
-- [Protocol Deep Dive](https://zap.hanzo.ai/docs/protocol)
-- [Transport Layer](https://zap.hanzo.ai/docs/transports)
-- [Why ZAP over MCP?](https://zap.hanzo.ai/docs/concepts/why-zap)
+- **[API Reference](https://zap.hanzo.ai/docs/api)** - Complete API documentation
+- **[Schema Guide](https://zap.hanzo.ai/docs/schema)** - ZAP schema language guide
+- **[Protocol Spec](https://zap.hanzo.ai/docs/protocol)** - Wire protocol specification
+- **[Security](https://zap.hanzo.ai/docs/security)** - Post-quantum crypto details
 
 ## License
 
@@ -277,7 +579,9 @@ MIT OR Apache-2.0
 
 ## Links
 
-- [GitHub Organization](https://github.com/zap-protocol)
+- [GitHub](https://github.com/hanzo-ai/zap)
 - [Documentation](https://zap.hanzo.ai)
+- [npm - zapc](https://www.npmjs.com/package/@zap-proto/zapc)
+- [crates.io - zap-proto](https://crates.io/crates/zap-proto)
+- [PyPI - zap-proto](https://pypi.org/project/zap-proto/)
 - [Hanzo AI](https://hanzo.ai)
-- [HIP-007 Whitepaper](https://zap.hanzo.ai/docs/whitepaper)
