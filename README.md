@@ -4,28 +4,57 @@ High-performance Cap'n Proto RPC for AI agent communication.
 
 ZAP provides a unified protocol for connecting to and aggregating MCP (Model Context Protocol) servers, enabling efficient tool calling, resource access, and prompt management for AI agents.
 
+**"Infinity Times Faster"** - When decode time is zero, the speedup is mathematically infinite.
+
 ## Features
 
-- **Zero-copy Serialization**: Cap'n Proto for minimal overhead
-- **Multi-transport**: Unix sockets, TCP, WebSocket, HTTP
+- **Zero-copy Serialization**: Cap'n Proto wire format = memory format
+- **Promise Pipelining**: N dependent calls in 1 round trip
+- **Capability Security**: Possession = permission, no ambient authority
+- **Multi-transport**: Unix sockets, TCP, TLS, QUIC, WebSocket, shared memory
 - **MCP Gateway**: Aggregate multiple MCP servers behind a single endpoint
-- **Cross-language**: Rust, Python, TypeScript implementations
-- **High Performance**: Designed for AI workloads with low latency
+- **Agent Consensus**: Built-in metastable voting for multi-agent coordination
+- **Post-Quantum Ready**: ML-KEM-768, ML-DSA-65, Ringtail signatures
+- **Cross-language**: 17 language bindings
 
-## Packages
+## Official Packages
 
 | Package | Language | Install |
 |---------|----------|---------|
-| `hanzo-zap` | Rust | `cargo add hanzo-zap` |
-| `hanzo-zap` | Python | `pip install hanzo-zap` |
-| `@hanzo/zap` | TypeScript | `npm install @hanzo/zap` |
+| `zap-protocol` | Rust | `cargo add zap-protocol` |
+| `zap-protocol` | Python | `pip install zap-protocol` |
+| `@zap-protocol/zap` | TypeScript | `npm install @zap-protocol/zap` |
+| `zap-protocol/zap-go` | Go | `go get github.com/zap-protocol/zap-go` |
+
+## Language Bindings
+
+All language bindings are maintained in the [zap-protocol](https://github.com/zap-protocol) GitHub organization:
+
+| Language | Repository | Status |
+|----------|------------|--------|
+| **Rust** | [zap-protocol/zap](https://github.com/zap-protocol/zap) | Production |
+| **Go** | [zap-protocol/zap-go](https://github.com/zap-protocol/zap-go) | Production |
+| **Python** | [zap-protocol/zap-py](https://github.com/zap-protocol/zap-py) | Production |
+| **JavaScript/TypeScript** | [zap-protocol/zap-js](https://github.com/zap-protocol/zap-js) | Production |
+| **C++** | [zap-protocol/zap-cpp](https://github.com/zap-protocol/zap-cpp) | Stable |
+| **C** | [zap-protocol/zap-c](https://github.com/zap-protocol/zap-c) | Stable |
+| **C#** | [zap-protocol/zap-cs](https://github.com/zap-protocol/zap-cs) | Development |
+| **Java** | [zap-protocol/zap-java](https://github.com/zap-protocol/zap-java) | Development |
+| **Haskell** | [zap-protocol/zap-haskell](https://github.com/zap-protocol/zap-haskell) | Development |
+| **OCaml** | [zap-protocol/zap-ocaml](https://github.com/zap-protocol/zap-ocaml) | Development |
+| **Erlang** | [zap-protocol/zap-erlang](https://github.com/zap-protocol/zap-erlang) | Development |
+| **D** | [zap-protocol/zap-d](https://github.com/zap-protocol/zap-d) | Development |
+| **Lua** | [zap-protocol/zap-lua](https://github.com/zap-protocol/zap-lua) | Development |
+| **Nim** | [zap-protocol/zap-nim](https://github.com/zap-protocol/zap-nim) | Development |
+| **Ruby** | [zap-protocol/zap-ruby](https://github.com/zap-protocol/zap-ruby) | Development |
+| **Scala** | [zap-protocol/zap-scala](https://github.com/zap-protocol/zap-scala) | Development |
 
 ## Quick Start
 
 ### Rust
 
 ```rust
-use zap::{Client, Gateway, Config};
+use zap_protocol::{Client, Gateway};
 
 // Connect to a ZAP gateway
 let client = Client::connect("zap://localhost:9999").await?;
@@ -37,25 +66,44 @@ let tools = client.list_tools().await?;
 let result = client.call_tool("search", json!({"query": "hello"})).await?;
 ```
 
+### Go
+
+```go
+import "github.com/zap-protocol/zap-go"
+
+// Connect to a ZAP gateway
+client, err := zap.Connect("zap://localhost:9999")
+
+// List available tools
+tools, err := client.ListTools(ctx)
+
+// Call a tool
+result, err := client.CallTool(ctx, "search", map[string]any{"query": "hello"})
+```
+
 ### Python
 
 ```python
-from hanzo_zap import Client, Gateway
+from zap import ZAP
 
-# Connect to a ZAP gateway
+# FastMCP-style decorator API
+zap = ZAP("my-agent")
+
+@zap.tool
+def search(query: str) -> str:
+    """Search for information."""
+    return f"Results for: {query}"
+
+# Or connect as client
+from zap import Client
 client = await Client.connect("zap://localhost:9999")
-
-# List available tools
 tools = await client.list_tools()
-
-# Call a tool
-result = await client.call_tool("search", {"query": "hello"})
 ```
 
 ### TypeScript
 
 ```typescript
-import { Client, Gateway } from '@hanzo/zap';
+import { Client, Gateway } from '@zap-protocol/zap';
 
 // Connect to a ZAP gateway
 const client = await Client.connect('zap://localhost:9999');
@@ -203,9 +251,25 @@ npm run build
 npm test
 ```
 
+## Tools
+
+| Tool | Repository | Description |
+|------|------------|-------------|
+| **VS Code** | [zap-protocol/zap-vscode](https://github.com/zap-protocol/zap-vscode) | VS Code extension |
+| **Vim** | [zap-protocol/zap-vim](https://github.com/zap-protocol/zap-vim) | Vim plugin |
+| **IntelliJ** | [zap-protocol/zap-intellij](https://github.com/zap-protocol/zap-intellij) | JetBrains plugin |
+| **LSP** | [zap-protocol/zap-lsp](https://github.com/zap-protocol/zap-lsp) | Language server |
+| **Wireshark** | [zap-protocol/zap-wireshark](https://github.com/zap-protocol/zap-wireshark) | Protocol dissector |
+
 ## Documentation
 
-Full documentation available at: https://hanzoai.github.io/zap
+Full documentation available at: https://zap.hanzo.ai
+
+- [Quick Start](https://zap.hanzo.ai/docs/quickstart)
+- [Architecture](https://zap.hanzo.ai/docs/architecture)
+- [Protocol Deep Dive](https://zap.hanzo.ai/docs/protocol)
+- [Transport Layer](https://zap.hanzo.ai/docs/transports)
+- [Why ZAP over MCP?](https://zap.hanzo.ai/docs/concepts/why-zap)
 
 ## License
 
@@ -213,6 +277,7 @@ MIT OR Apache-2.0
 
 ## Links
 
-- [GitHub](https://github.com/hanzoai/zap)
-- [Documentation](https://hanzoai.github.io/zap)
+- [GitHub Organization](https://github.com/zap-protocol)
+- [Documentation](https://zap.hanzo.ai)
 - [Hanzo AI](https://hanzo.ai)
+- [HIP-007 Whitepaper](https://zap.hanzo.ai/docs/whitepaper)
