@@ -86,6 +86,9 @@ sha2 = { version = "0.10", optional = true }
 rand = { version = "0.8", optional = true }
 zeroize = { version = "1.7", optional = true }
 
+# ZeroTier transport (optional, requires 'zt' feature)
+hanzo-zt = { path = "../../hanzo/dev/hanzo-dev/zt", optional = true, default-features = false }
+
 # gRPC/Protobuf (optional, requires 'grpc' feature)
 # NOTE: Only compiled when +grpc feature is enabled
 tonic = { version = "0.12", optional = true }
@@ -111,6 +114,7 @@ default = ["pq"]  # Post-quantum crypto always enabled
 mcp = ["reqwest", "async-trait"]
 pq = ["pqcrypto-mlkem", "pqcrypto-dilithium", "pqcrypto-traits", "x25519-dalek", "hkdf", "sha2", "rand", "zeroize"]
 grpc = ["tonic", "prost", "prost-types"]
+zt = ["dep:hanzo-zt"]
 full = ["mcp", "pq", "grpc"]
 
 [profile.release]
