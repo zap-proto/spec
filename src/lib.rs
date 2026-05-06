@@ -40,6 +40,7 @@ pub mod consensus;
 pub mod identity;
 pub mod agent_consensus;
 pub mod schema;
+pub mod zwing;
 
 pub use client::Client;
 pub use server::Server;
