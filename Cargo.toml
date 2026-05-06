@@ -100,10 +100,15 @@ tonic = { version = "0.12", optional = true }
 prost = { version = "0.13", optional = true }
 prost-types = { version = "0.13", optional = true }
 
+# Z-Wing IETF X-Wing combiner (SHA3-256). Always-on, no feature flag —
+# the KEM combiner is a public spec.
+sha3 = "0.10"
+
 [dev-dependencies]
 tempfile = "3"
 tokio-test = "0.4"
 criterion = { version = "0.5", features = ["html_reports"] }
+hex-literal = "0.4"
 
 [build-dependencies]
 capnpc = "0.20"
