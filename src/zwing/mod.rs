@@ -8,9 +8,6 @@
 //! Go implementation in `github.com/luxfi/zwing` and any third-party
 //! X-Wing peer.
 //!
-//! This module currently exposes the KEM combiner and constant-time
-//! sizes. The full handshake and identity layer port follow on.
-//!
 //! # X-Wing combiner (IETF spec, exact)
 //!
 //! ```text
@@ -21,8 +18,39 @@
 //! lives one layer up in the HKDF info string `"lux.zwing.v1/{i2r,r2i}"`
 //! that derives the channel keys, and in the ML-DSA context
 //! `"lux.zwing.v1"` used for hybrid identity signatures.
+//!
+//! Under the `zwing` feature (default-on), this module also exposes the
+//! full Lux PQ secure channel: hybrid identity signatures, the 1-RTT
+//! handshake, and ChaCha20-Poly1305 record encryption. See `identity`,
+//! `kem`, `handshake`, `channel`, `errors` submodules.
 
 use sha3::{Digest, Sha3_256};
+
+#[cfg(feature = "zwing")]
+pub mod channel;
+#[cfg(feature = "zwing")]
+pub mod errors;
+#[cfg(feature = "zwing")]
+pub mod handshake;
+#[cfg(feature = "zwing")]
+pub mod identity;
+#[cfg(feature = "zwing")]
+pub mod kem;
+
+#[cfg(feature = "zwing")]
+pub use channel::Channel;
+#[cfg(feature = "zwing")]
+pub use handshake::MAX_FRAME_SIZE;
+#[cfg(feature = "zwing")]
+pub use errors::{Error, Result};
+#[cfg(feature = "zwing")]
+pub use handshake::{run_initiator, run_responder, HandshakeOutput};
+#[cfg(feature = "zwing")]
+pub use identity::{Identity, IdentityPublic, IDENTITY_PUBLIC_SIZE};
+#[cfg(feature = "zwing")]
+pub use kem::{
+    xwing_decapsulate, xwing_encapsulate, XWingPrivateKey, XWingPublicKey,
+};
 
 /// ML-KEM-768 public key size in bytes.
 pub const MLKEM768_PUBLIC_KEY_SIZE: usize = 1184;
