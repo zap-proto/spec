@@ -5,9 +5,10 @@
 //! Signature wire = `[Ed25519 sig: 64][ML-DSA-65 sig: 3309]` = 3373 bytes.
 
 use ed25519_dalek::{Signer, Verifier};
-use pqcrypto_dilithium::dilithium3::{
-    self, detached_sign as ml_sign, keypair as ml_keypair, verify_detached_signature as ml_verify,
-    DetachedSignature as MlSig, PublicKey as MlPub, SecretKey as MlSec,
+use pqcrypto_mldsa::mldsa65::{
+    detached_sign_ctx as ml_sign_ctx, keypair as ml_keypair,
+    verify_detached_signature_ctx as ml_verify_ctx, DetachedSignature as MlSig,
+    PublicKey as MlPub, SecretKey as MlSec,
 };
 use pqcrypto_traits::sign::{
     DetachedSignature as KemDetachedSig, PublicKey as KemSignPub, SecretKey as KemSignSec,
@@ -25,13 +26,11 @@ pub const ED25519_PUBLIC_KEY_SIZE: usize = 32;
 pub const ED25519_SIGNATURE_SIZE: usize = 64;
 /// ML-DSA-65 public key length (FIPS 204).
 pub const MLDSA65_PUBLIC_KEY_SIZE: usize = 1952;
-/// Dilithium3 / ML-DSA-65 signature length. pqcrypto-dilithium 0.5
-/// targets PQClean Dilithium3, which has a 3309-byte detached
-/// signature. The Go side uses cloudflare/circl's `mldsa65` which
-/// produces signatures at FIPS 204 final lengths — not byte-identical
-/// across libraries, so cross-language handshakes go via the
-/// always-on KEM combiner KAT (see `super::tests`) rather than full
-/// signature interop until both sides adopt the same FIPS 204 impl.
+/// FIPS 204 final ML-DSA-65 detached-signature length, matching the Go
+/// (cloudflare/circl mldsa65), Python (dilithium-py), and TS
+/// (@noble/post-quantum ml-dsa65) implementations exactly. Cross-
+/// language handshakes between Rust and the others verify under each
+/// other byte-for-byte.
 pub const MLDSA65_SIGNATURE_SIZE: usize = 3309;
 
 /// Total wire size of `IdentityPublic`.
@@ -94,19 +93,18 @@ impl Identity {
         &self.xwing
     }
 
-    /// Sign `(ctx, message)` with both Ed25519 and ML-DSA-65. The output
-    /// is the concatenation `[Ed25519 sig: 64][ML-DSA-65 sig: 3293]`.
+    /// Sign `(ctx, message)` with both Ed25519 and ML-DSA-65. Output is
+    /// the concatenation `[Ed25519 sig: 64][ML-DSA-65 sig: 3309]`.
     ///
-    /// Note: pqcrypto-dilithium's "dilithium3" produces a detached
-    /// signature of length 3293, matching FIPS 204 ML-DSA-65 with the
-    /// `pure` mode (no domain separator at signing time). We bind the
-    /// `lux.zwing.v1` domain into the SHA-256 digest before signing so
-    /// signatures are tied to the protocol regardless of the underlying
-    /// algorithm's own context support.
+    /// The ML-DSA-65 detached signature is produced with the FIPS 204
+    /// `ctx = ZWING_DOMAIN` parameter, exactly matching the Go side's
+    /// `DSAPriv.SignCtx(rand, digest, []byte("lux.zwing.v1"))` and the
+    /// Python/TS sides' `ML_DSA_65.sign(..., ctx=ZWING_DOMAIN)` so
+    /// Rust-produced signatures verify under any other Z-Wing peer.
     pub fn sign(&self, ctx: &[u8], message: &[u8]) -> Vec<u8> {
         let digest = identity_digest(ctx, message);
         let ed_sig = self.ed_sk.sign(&digest);
-        let ml_sig = ml_sign(&digest, &self.ml_sk);
+        let ml_sig = ml_sign_ctx(&digest, ZWING_DOMAIN, &self.ml_sk);
         let mut out = Vec::with_capacity(SIGNATURE_SIZE);
         out.extend_from_slice(&ed_sig.to_bytes());
         out.extend_from_slice(ml_sig.as_bytes());
@@ -165,7 +163,8 @@ impl IdentityPublic {
 
         let ml_sig = MlSig::from_bytes(&signature[ED25519_SIGNATURE_SIZE..])
             .map_err(|_| Error::SignatureInvalid)?;
-        ml_verify(&ml_sig, &digest, &self.ml_pk).map_err(|_| Error::SignatureInvalid)?;
+        ml_verify_ctx(&ml_sig, &digest, ZWING_DOMAIN, &self.ml_pk)
+            .map_err(|_| Error::SignatureInvalid)?;
         Ok(())
     }
 

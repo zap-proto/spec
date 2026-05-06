@@ -82,6 +82,10 @@ luxcrypto-sys = { path = "../../lux/crypto/bindings/rust", optional = true }
 # Post-Quantum Cryptography — pqcrypto (fallback, Rust crates)
 pqcrypto-mlkem = { version = "0.1", optional = true }
 pqcrypto-dilithium = { version = "0.5", optional = true }
+# FIPS 204 final ML-DSA-65 — used by Z-Wing for cross-language wire-byte
+# compatibility with the Go (cloudflare/circl), Python (dilithium-py),
+# and TS (@noble/post-quantum) implementations.
+pqcrypto-mldsa = { version = "0.1", optional = true }
 pqcrypto-traits = { version = "0.3", optional = true }
 
 # Shared crypto deps
@@ -134,7 +138,7 @@ pq = ["pqcrypto-mlkem", "pqcrypto-dilithium", "pqcrypto-traits", "x25519-dalek",
 # secure channel just works.
 zwing = [
     "pqcrypto-mlkem",
-    "pqcrypto-dilithium",
+    "pqcrypto-mldsa",
     "pqcrypto-traits",
     "x25519-dalek",
     "hkdf",
