@@ -1,10 +1,10 @@
 {
-  "name": "@hanzo-ai/zapc",
+  "name": "@zap-proto/zapc",
   "version": "1.0.0",
-  "description": "ZAP Schema Compiler - Zero-copy Application Protocol schema language",
+  "description": "ZAP Schema Compiler — brand-neutral, zero-copy application protocol schema language",
   "keywords": [
     "zap",
-    "hanzo",
+    "zap-proto",
     "schema",
     "compiler",
     "rpc",
@@ -14,7 +14,7 @@
     "ai",
     "agents"
   ],
-  "author": "Hanzo AI <dev@hanzo.ai>",
+  "author": "ZAP Protocol",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -48,10 +48,13 @@
     "arm64"
   ],
   "optionalDependencies": {
-    "@hanzo-ai/zapc-darwin-arm64": "1.0.0",
-    "@hanzo-ai/zapc-darwin-x64": "1.0.0",
-    "@hanzo-ai/zapc-linux-arm64": "1.0.0",
-    "@hanzo-ai/zapc-linux-x64": "1.0.0",
-    "@hanzo-ai/zapc-win32-x64": "1.0.0"
+    "@zap-proto/zapc-darwin-arm64": "1.0.0",
+    "@zap-proto/zapc-darwin-x64": "1.0.0",
+    "@zap-proto/zapc-linux-arm64": "1.0.0",
+    "@zap-proto/zapc-linux-x64": "1.0.0",
+    "@zap-proto/zapc-win32-x64": "1.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
