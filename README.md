@@ -1,6 +1,6 @@
 # ZAP - Zero-Copy App Proto
 
-> **Docs:** [ZAP wire spec](https://zap-proto.dev/docs/protocol) · part of the [ZAP Protocol](https://zap-proto.io)
+> **Docs:** [ZAP wire spec](https://zap-proto.dev/docs/protocol) · part of the [ZAP Protocol](https://zap-proto.io); also: [Native ZAP RPC](https://zap-proto.dev/docs/protocols/native)
 
 
 High-performance Cap'n Proto RPC for AI agent communication.
