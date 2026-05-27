@@ -1,5 +1,8 @@
 # ZAP - Zero-Copy App Proto
 
+> **Docs:** [ZAP wire spec](https://zap-proto.dev/docs/protocol) · part of the [ZAP Protocol](https://zap-proto.io)
+
+
 High-performance Cap'n Proto RPC for AI agent communication.
 
 ZAP provides a unified protocol for connecting to and aggregating MCP (Model Context Protocol) servers, enabling efficient tool calling, resource access, and prompt management for AI agents.
