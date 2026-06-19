@@ -1,5 +1,5 @@
 {
-  "name": "@hanzo/zap",
+  "name": "@zap-proto/zap",
   "version": "0.2.1",
   "description": "ZAP - Zero-Copy App Proto for TypeScript",
   "type": "module",
@@ -30,18 +30,17 @@
     "rpc",
     "agents",
     "mcp",
-    "ai",
-    "hanzo"
+    "ai"
   ],
-  "author": "Hanzo AI <dev@hanzo.ai>",
+  "author": "ZAP Protocol <dev@zap-proto.dev>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hanzoai/zap"
+    "url": "https://github.com/zap-proto/spec"
   },
-  "homepage": "https://hanzo.ai/zap",
+  "homepage": "https://zap-proto.dev",
   "bugs": {
-    "url": "https://github.com/hanzoai/zap/issues"
+    "url": "https://github.com/zap-proto/spec/issues"
   },
   "dependencies": {},
   "devDependencies": {

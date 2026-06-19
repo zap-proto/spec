@@ -1,7 +1,7 @@
-"""Tests for hanzo_zap.error module."""
+"""Tests for zap.error module."""
 
 import pytest
-from hanzo_zap.error import ZapError
+from zap.error import ZapError
 
 
 class TestZapError:

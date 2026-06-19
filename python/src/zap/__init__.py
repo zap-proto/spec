@@ -5,7 +5,7 @@ High-performance ZAP RPC for AI agent communication.
 
 Example:
     >>> import asyncio
-    >>> from hanzo_zap import Client
+    >>> from zap import Client
     >>>
     >>> async def main():
     ...     client = await Client.connect("zap://localhost:9999")

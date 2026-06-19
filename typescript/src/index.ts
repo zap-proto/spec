@@ -5,7 +5,7 @@
  *
  * @example
  * ```typescript
- * import { Client } from '@hanzo/zap';
+ * import { Client } from '@zap-proto/zap';
  *
  * const client = await Client.connect('zap://localhost:9999');
  * const tools = await client.listTools();

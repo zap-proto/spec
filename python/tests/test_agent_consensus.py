@@ -1,8 +1,8 @@
-"""Tests for hanzo_zap.agent_consensus module."""
+"""Tests for zap.agent_consensus module."""
 
 import pytest
-from hanzo_zap.identity import Did, DidMethod
-from hanzo_zap.agent_consensus import (
+from zap.identity import Did, DidMethod
+from zap.agent_consensus import (
     Query,
     Response,
     ConsensusResult,

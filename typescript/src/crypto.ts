@@ -15,7 +15,7 @@
  *
  * @example
  * ```typescript
- * import { PQKeyExchange, PQSignature, HybridHandshake } from '@hanzo/zap/crypto';
+ * import { PQKeyExchange, PQSignature, HybridHandshake } from '@zap-proto/zap/crypto';
  *
  * // Key exchange
  * const alice = await PQKeyExchange.generate();

@@ -232,7 +232,7 @@ interface Zap {
 ### Rust
 
 ```bash
-cd /path/to/hanzo-zap
+cd /path/to/zap
 cargo build
 cargo test
 ```
@@ -240,7 +240,7 @@ cargo test
 ### Python
 
 ```bash
-cd /path/to/hanzo-zap/python
+cd /path/to/zap/python
 uv sync
 uv run pytest
 ```
@@ -248,7 +248,7 @@ uv run pytest
 ### TypeScript
 
 ```bash
-cd /path/to/hanzo-zap/typescript
+cd /path/to/zap/typescript
 npm install
 npm run build
 npm test
@@ -266,13 +266,13 @@ npm test
 
 ## Documentation
 
-Full documentation available at: https://zap.hanzo.ai
+Full documentation available at: https://zap-proto.dev
 
-- [Quick Start](https://zap.hanzo.ai/docs/quickstart)
-- [Architecture](https://zap.hanzo.ai/docs/architecture)
-- [Protocol Deep Dive](https://zap.hanzo.ai/docs/protocol)
-- [Transport Layer](https://zap.hanzo.ai/docs/transports)
-- [Why ZAP over MCP?](https://zap.hanzo.ai/docs/concepts/why-zap)
+- [Quick Start](https://zap-proto.dev/docs/quickstart)
+- [Architecture](https://zap-proto.dev/docs/architecture)
+- [Protocol Deep Dive](https://zap-proto.dev/docs/protocol)
+- [Transport Layer](https://zap-proto.dev/docs/transports)
+- [Why ZAP over MCP?](https://zap-proto.dev/docs/concepts/why-zap)
 
 ## License
 
@@ -281,6 +281,6 @@ MIT OR Apache-2.0
 ## Links
 
 - [GitHub Organization](https://github.com/zap-protocol)
-- [Documentation](https://zap.hanzo.ai)
-- [Hanzo AI](https://hanzo.ai)
-- [HIP-007 Whitepaper](https://zap.hanzo.ai/docs/whitepaper)
+- [Documentation](https://zap-proto.dev)
+- [ZAP Protocol](https://zap-proto.dev)
+- [HIP-007 Whitepaper](https://zap-proto.dev/docs/whitepaper)

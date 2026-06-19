@@ -91,7 +91,7 @@ jobs:
       - name: Run tests with coverage
         working-directory: python
         run: |
-          uv run pytest tests/ -v --cov=src/hanzo_zap --cov-report=xml --cov-report=term --cov-fail-under=80
+          uv run pytest tests/ -v --cov=src/zap --cov-report=xml --cov-report=term --cov-fail-under=80
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4

@@ -1,4 +1,4 @@
-# hanzo-zap
+# zap
 
 ZAP - Zero-Copy App Proto for Python
 
@@ -7,14 +7,14 @@ High-performance ZAP RPC for AI agent communication.
 ## Installation
 
 ```bash
-pip install hanzo-zap
+pip install zap
 ```
 
 ## Quick Start
 
 ```python
 import asyncio
-from hanzo_zap import Client
+from zap import Client
 
 async def main():
     client = await Client.connect("zap://localhost:9999")
