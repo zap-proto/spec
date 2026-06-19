@@ -22,7 +22,7 @@ export class Server {
   async run(): Promise<void> {
     const addr = `${this.config.listen}:${this.config.port}`;
     console.log(`ZAP server listening on ${addr}`);
-    // TODO: Start Cap'n Proto RPC server
+    // TODO: Start ZAP RPC server
     await new Promise(() => {}); // Wait forever
   }
 }

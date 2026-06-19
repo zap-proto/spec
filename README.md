@@ -3,7 +3,7 @@
 > **Docs:** [ZAP wire spec](https://zap-proto.dev/docs/protocol) · part of the [ZAP Protocol](https://zap-proto.io); also: [Native ZAP RPC](https://zap-proto.dev/docs/protocols/native)
 
 
-High-performance Cap'n Proto RPC for AI agent communication.
+High-performance ZAP RPC for AI agent communication.
 
 ZAP provides a unified protocol for connecting to and aggregating MCP (Model Context Protocol) servers, enabling efficient tool calling, resource access, and prompt management for AI agents.
 
@@ -11,7 +11,7 @@ ZAP provides a unified protocol for connecting to and aggregating MCP (Model Con
 
 ## Features
 
-- **Zero-copy Serialization**: Cap'n Proto wire format = memory format
+- **Zero-copy Serialization**: ZAP wire format = memory format
 - **Promise Pipelining**: N dependent calls in 1 round trip
 - **Capability Security**: Possession = permission, no ambient authority
 - **Multi-transport**: Unix sockets, TCP, TLS, QUIC, WebSocket, shared memory
@@ -181,7 +181,7 @@ url = "ws://localhost:9000/ws"
 │                    (Claude, GPT, etc.)                      │
 └──────────────────────────┬──────────────────────────────────┘
                            │
-                           │ ZAP Protocol (Cap'n Proto RPC)
+                           │ ZAP Protocol (ZAP RPC)
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -206,9 +206,9 @@ url = "ws://localhost:9000/ws"
 
 ## Protocol
 
-ZAP uses Cap'n Proto for efficient serialization and RPC:
+ZAP uses a zero-copy wire format for efficient serialization and RPC:
 
-```capnp
+```zap
 interface Zap {
   # Server discovery
   initialize @0 (info :ServerInfo) -> (info :ServerInfo);

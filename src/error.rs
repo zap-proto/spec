@@ -41,8 +41,8 @@ pub enum Error {
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("capnp error: {0}")]
-    Capnp(#[from] capnp::Error),
+    #[error("serialization error: {0}")]
+    Serialization(String),
 
     #[error("json error: {0}")]
     Json(#[from] serde_json::Error),

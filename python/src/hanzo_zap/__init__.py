@@ -1,7 +1,7 @@
 """
 ZAP - Zero-Copy App Proto
 
-High-performance Cap'n Proto RPC for AI agent communication.
+High-performance ZAP RPC for AI agent communication.
 
 Example:
     >>> import asyncio

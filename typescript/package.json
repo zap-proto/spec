@@ -26,7 +26,7 @@
     "format": "prettier --write src"
   },
   "keywords": [
-    "capnproto",
+    "zap",
     "rpc",
     "agents",
     "mcp",
@@ -43,9 +43,7 @@
   "bugs": {
     "url": "https://github.com/hanzoai/zap/issues"
   },
-  "dependencies": {
-    "capnp-ts": "^0.7.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "^2.0.0",

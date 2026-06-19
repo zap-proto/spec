@@ -2,7 +2,7 @@
 
 ZAP - Zero-Copy App Proto for Python
 
-High-performance Cap'n Proto RPC for AI agent communication.
+High-performance ZAP RPC for AI agent communication.
 
 ## Installation
 
@@ -26,7 +26,7 @@ asyncio.run(main())
 
 ## Features
 
-- **Zero-copy serialization** via Cap'n Proto
+- **Zero-copy serialization** via the ZAP wire format
 - **Post-quantum cryptography** with ML-KEM and ML-DSA
 - **W3C DID identity** for decentralized agent authentication
 - **Agentic consensus** for trustless response voting

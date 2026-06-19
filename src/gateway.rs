@@ -79,7 +79,7 @@ impl Gateway {
             let _ = self.add_server(&name, &url, server_config).await;
         }
 
-        // TODO: Start Cap'n Proto RPC server
+        // TODO: Start ZAP RPC server
         tokio::signal::ctrl_c().await?;
 
         Ok(())

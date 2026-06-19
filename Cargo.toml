@@ -1,17 +1,16 @@
 [workspace]
 
 [package]
-name = "hanzo-zap"
+name = "zap"
 version = "0.2.1"
 edition = "2021"
 rust-version = "1.75"
-authors = ["Hanzo AI <dev@hanzo.ai>"]
-description = "ZAP - Zero-Copy App Proto"
+description = "ZAP — Zero-copy Application Protocol"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/hanzoai/zap"
-homepage = "https://hanzo.ai/zap"
-documentation = "https://hanzoai.github.io/zap/docs"
-keywords = ["capnproto", "rpc", "agents", "mcp", "ai"]
+repository = "https://github.com/zap-proto/spec"
+homepage = "https://zap-proto.dev"
+documentation = "https://zap-proto.dev/docs"
+keywords = ["zap", "rpc", "agents", "mcp", "ai"]
 categories = ["network-programming", "development-tools"]
 readme = "README.md"
 
@@ -28,10 +27,6 @@ name = "zapd"
 path = "src/bin/zapd.rs"
 
 [dependencies]
-# Cap'n Proto
-capnp = "0.20"
-capnp-rpc = "0.20"
-
 # Async
 tokio = { version = "1", features = ["full"] }
 futures = "0.3"
@@ -83,9 +78,6 @@ zeroize = { version = "1.7", optional = true }
 [dev-dependencies]
 tempfile = "3"
 tokio-test = "0.4"
-
-[build-dependencies]
-capnpc = "0.20"
 
 [features]
 default = []

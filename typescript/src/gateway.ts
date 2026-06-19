@@ -37,7 +37,7 @@ export class Gateway {
       await this.connectServer(serverConfig);
     }
 
-    // TODO: Start Cap'n Proto RPC server
+    // TODO: Start ZAP RPC server
     console.log(`ZAP gateway ready with ${this.servers.size} servers`);
   }
 

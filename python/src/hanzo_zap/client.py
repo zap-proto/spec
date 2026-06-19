@@ -47,7 +47,7 @@ class Client:
     async def connect(cls, url: str) -> Client:
         """Connect to a ZAP gateway."""
         client = cls(url)
-        # TODO: Establish Cap'n Proto RPC connection
+        # TODO: Establish ZAP RPC connection
         client._connected = True
         return client
 

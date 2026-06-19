@@ -73,6 +73,6 @@ class Gateway:
                 server_config,
             )
 
-        # TODO: Start Cap'n Proto RPC server
+        # TODO: Start ZAP RPC server
         import asyncio
         await asyncio.Event().wait()

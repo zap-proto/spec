@@ -16,7 +16,7 @@ export class Client {
   /** Connect to a ZAP gateway */
   static async connect(url: string): Promise<Client> {
     const client = new Client(url);
-    // TODO: Establish Cap'n Proto RPC connection
+    // TODO: Establish ZAP RPC connection
     client.connected = true;
     return client;
   }

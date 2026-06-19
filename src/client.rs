@@ -13,7 +13,7 @@ impl Client {
     /// Connect to a ZAP gateway
     pub async fn connect(url: &str) -> Result<Self> {
         let url = url.to_string();
-        // TODO: Establish Cap'n Proto RPC connection
+        // TODO: Establish ZAP RPC connection
         Ok(Self { url })
     }
 

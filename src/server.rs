@@ -18,7 +18,7 @@ impl Server {
         let addr = format!("{}:{}", self.config.listen, self.config.port);
         tracing::info!("ZAP server listening on {}", addr);
 
-        // TODO: Start Cap'n Proto RPC server
+        // TODO: Start ZAP RPC server
         tokio::signal::ctrl_c().await?;
 
         Ok(())
