@@ -834,7 +834,6 @@ impl Transport for HttpSseTransport {
 /// - `stdio://` - Stdio transport (for MCP subprocess servers)
 /// - `http://` or `https://` - HTTP/SSE transport (requires `mcp` feature)
 /// - `udp://` - UDP transport (fire-and-forget, low-latency)
-/// - `zt://` - ZeroTier transport (requires `zt` feature)
 pub async fn connect(url: &str) -> Result<Box<dyn Transport>> {
     let parsed = Url::parse(url)?;
 
@@ -882,25 +881,8 @@ pub async fn connect(url: &str) -> Result<Box<dyn Transport>> {
             let transport = UdpTransport::connect("0.0.0.0:0", &peer_addr).await?;
             Ok(Box::new(transport))
         }
-        #[cfg(feature = "zt")]
         "zt" => {
-            // ZT transport — requires hanzo-zt crate
-            // Delegate to hanzo_zt::transport::ZtTransport
-            let service = parsed.host_str().unwrap_or("default");
-            let controller_url = parsed.query_pairs()
-                .find(|(k, _)| k == "controller")
-                .map(|(_, v)| v.to_string())
-                .unwrap_or_else(|| "https://zt-api.hanzo.ai".to_string());
-
-            let transport = hanzo_zt::ZtTransport::new(&controller_url, service).await
-                .map_err(|e| Error::Transport(format!("zt connect failed: {e}")))?;
-            Ok(Box::new(transport))
-        }
-        #[cfg(not(feature = "zt"))]
-        "zt" => {
-            Err(Error::Transport(
-                "ZT transport requires 'zt' feature".into()
-            ))
+            Err(Error::Transport("zt transport not supported".into()))
         }
         _ => Err(Error::Transport(format!(
             "unsupported URL scheme: {}",

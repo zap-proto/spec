@@ -28,7 +28,7 @@ use zap::schema::{compile_to_rust, migrate_capnp_to_zap, transpile_str, ZapSchem
 
 #[derive(Parser)]
 #[command(name = "zapc")]
-#[command(author = "Hanzo AI <dev@hanzo.ai>")]
+#[command(author = "The ZAP Protocol authors")]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 #[command(about = "ZAP Schema Compiler - compile .zap schemas to various formats")]
 #[command(long_about = r#"
@@ -359,7 +359,6 @@ fn cmd_fmt(input: PathBuf, write: bool) -> Result<(), String> {
 
 fn cmd_version() -> Result<(), String> {
     println!("zapc {} (ZAP Schema Compiler)", env!("CARGO_PKG_VERSION"));
-    println!("Copyright (C) 2024 Hanzo AI");
     println!("License: Apache-2.0 OR MIT");
     println!();
     println!("Features:");

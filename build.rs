@@ -31,7 +31,7 @@ fn main() {
             .build_server(true)
             .build_client(true)
             .out_dir("src/generated")
-            .compile(
+            .compile_protos(
                 &["proto/zap.proto", "proto/benchmark.proto"],
                 &["proto/"],
             )

@@ -1,13 +1,8 @@
 //! Post-Quantum Cryptography Module for ZAP
 //!
-//! One library, one implementation: luxcrypto (libluxcrypto FFI).
-//! Same PQ crypto from Lux blockchain to AI agents.
-//!
-//! Backend chain:
-//!   1. luxcrypto-sys (libluxcrypto.{dylib,so,dll}) — preferred, FIPS 203/204 via circl
-//!   2. pqcrypto (Rust crate) — fallback, third-party PQ implementations
-//!
-//! X25519 always uses x25519-dalek.
+//! One library, one implementation: pure-Rust pqcrypto crates.
+//! ML-KEM-768 (FIPS 203) for key exchange and Dilithium3 for signatures,
+//! gated behind the `pq` feature. X25519 always uses x25519-dalek.
 //!
 //! # Example
 //!
@@ -54,366 +49,17 @@ pub const HYBRID_SHARED_SECRET_SIZE: usize = 32;
 
 /// Which PQ backend is active.
 ///
-/// - `"luxcrypto"` — libluxcrypto FFI (preferred)
-/// - `"pqcrypto"` — Rust pqcrypto crates (fallback)
-pub const PQ_BACKEND: &str = if cfg!(feature = "luxcrypto") {
-    "luxcrypto"
-} else if cfg!(feature = "pq") {
-    "pqcrypto"
+/// - `"pq"` — Rust pqcrypto crates (ML-KEM-768 + Dilithium3)
+/// - `"unavailable"` — no PQ feature enabled
+pub const PQ_BACKEND: &str = if cfg!(feature = "pq") {
+    "pq"
 } else {
     "unavailable"
 };
 
-// ── luxcrypto-sys backend ────────────────────────────────────────────
+// ── pqcrypto backend ─────────────────────────────────────────────────
 
-#[cfg(feature = "luxcrypto")]
-mod lux_impl {
-    use super::*;
-    use hkdf::Hkdf;
-    use rand::rngs::OsRng;
-    use sha2::Sha256;
-    use x25519_dalek::{EphemeralSecret, PublicKey as X25519PublicKey};
-    use zeroize::Zeroize;
-
-    pub struct PQKeyExchange {
-        public_key: Vec<u8>,
-        secret_key: Vec<u8>,
-    }
-
-    impl PQKeyExchange {
-        pub fn generate() -> Result<Self> {
-            let (pk, sk) = luxcrypto_sys::mlkem768::keypair()
-                .map_err(|e| Error::Crypto(e.to_string()))?;
-            Ok(Self { public_key: pk, secret_key: sk })
-        }
-
-        pub fn public_key_bytes(&self) -> Vec<u8> {
-            self.public_key.clone()
-        }
-
-        pub fn from_public_key(bytes: &[u8]) -> Result<Self> {
-            if bytes.len() != MLKEM_PUBLIC_KEY_SIZE {
-                return Err(Error::Crypto(format!(
-                    "invalid ML-KEM public key size: expected {}, got {}",
-                    MLKEM_PUBLIC_KEY_SIZE, bytes.len()
-                )));
-            }
-            Ok(Self {
-                public_key: bytes.to_vec(),
-                secret_key: Vec::new(),
-            })
-        }
-
-        pub fn encapsulate(&self, recipient_pk: &[u8]) -> Result<(Vec<u8>, [u8; 32])> {
-            let (ct, ss) = luxcrypto_sys::mlkem768::encapsulate(recipient_pk)
-                .map_err(|e| Error::Crypto(e.to_string()))?;
-            let mut shared = [0u8; 32];
-            shared.copy_from_slice(&ss[..32]);
-            Ok((ct, shared))
-        }
-
-        pub fn decapsulate(&self, ciphertext: &[u8]) -> Result<[u8; 32]> {
-            if ciphertext.len() != MLKEM_CIPHERTEXT_SIZE {
-                return Err(Error::Crypto(format!(
-                    "invalid ML-KEM ciphertext size: expected {}, got {}",
-                    MLKEM_CIPHERTEXT_SIZE, ciphertext.len()
-                )));
-            }
-            let ss = luxcrypto_sys::mlkem768::decapsulate(&self.secret_key, ciphertext)
-                .map_err(|e| Error::Crypto(e.to_string()))?;
-            let mut shared = [0u8; 32];
-            shared.copy_from_slice(&ss[..32]);
-            Ok(shared)
-        }
-    }
-
-    pub struct PQSignature {
-        public_key: Vec<u8>,
-        secret_key: Option<Vec<u8>>,
-    }
-
-    impl std::fmt::Debug for PQSignature {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            f.debug_struct("PQSignature")
-                .field("public_key", &"<public_key>")
-                .field("secret_key", &self.secret_key.as_ref().map(|_| "<secret_key>"))
-                .finish()
-        }
-    }
-
-    impl Clone for PQSignature {
-        fn clone(&self) -> Self {
-            Self {
-                public_key: self.public_key.clone(),
-                secret_key: self.secret_key.clone(),
-            }
-        }
-    }
-
-    impl PQSignature {
-        pub fn generate() -> Result<Self> {
-            let (pk, sk) = luxcrypto_sys::mldsa65::keypair()
-                .map_err(|e| Error::Crypto(e.to_string()))?;
-            Ok(Self { public_key: pk, secret_key: Some(sk) })
-        }
-
-        pub fn public_key_bytes(&self) -> Vec<u8> {
-            self.public_key.clone()
-        }
-
-        pub fn from_public_key(bytes: &[u8]) -> Result<Self> {
-            if bytes.len() != MLDSA_PUBLIC_KEY_SIZE {
-                return Err(Error::Crypto(format!(
-                    "invalid ML-DSA public key size: expected {}, got {}",
-                    MLDSA_PUBLIC_KEY_SIZE, bytes.len()
-                )));
-            }
-            Ok(Self { public_key: bytes.to_vec(), secret_key: None })
-        }
-
-        pub fn sign(&self, message: &[u8]) -> Result<Vec<u8>> {
-            let sk = self.secret_key.as_ref()
-                .ok_or_else(|| Error::Crypto("no secret key available for signing".into()))?;
-            luxcrypto_sys::mldsa65::sign(sk, message)
-                .map_err(|e| Error::Crypto(e.to_string()))
-        }
-
-        pub fn verify(&self, message: &[u8], signature: &[u8]) -> Result<()> {
-            if !luxcrypto_sys::mldsa65::verify(&self.public_key, message, signature) {
-                return Err(Error::Crypto("signature verification failed".into()));
-            }
-            Ok(())
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct HybridInitiatorData {
-        pub x25519_public_key: [u8; 32],
-        pub mlkem_public_key: Vec<u8>,
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct HybridResponderData {
-        pub x25519_public_key: [u8; 32],
-        pub mlkem_ciphertext: Vec<u8>,
-    }
-
-    #[derive(Clone)]
-    pub struct HybridSharedSecret {
-        secret: [u8; HYBRID_SHARED_SECRET_SIZE],
-    }
-
-    impl HybridSharedSecret {
-        pub fn as_bytes(&self) -> &[u8; HYBRID_SHARED_SECRET_SIZE] {
-            &self.secret
-        }
-
-        pub fn into_bytes(self) -> [u8; HYBRID_SHARED_SECRET_SIZE] {
-            self.secret
-        }
-    }
-
-    impl Drop for HybridSharedSecret {
-        fn drop(&mut self) {
-            self.secret.zeroize();
-        }
-    }
-
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    enum HandshakeRole {
-        Initiator,
-        Responder,
-    }
-
-    pub struct HybridHandshake {
-        x25519_secret: Option<EphemeralSecret>,
-        x25519_public: X25519PublicKey,
-        mlkem: PQKeyExchange,
-        role: HandshakeRole,
-    }
-
-    impl HybridHandshake {
-        pub fn initiate() -> Result<Self> {
-            let x25519_secret = EphemeralSecret::random_from_rng(OsRng);
-            let x25519_public = X25519PublicKey::from(&x25519_secret);
-            let mlkem = PQKeyExchange::generate()?;
-
-            Ok(Self {
-                x25519_secret: Some(x25519_secret),
-                x25519_public,
-                mlkem,
-                role: HandshakeRole::Initiator,
-            })
-        }
-
-        pub fn public_data(&self) -> HybridInitiatorData {
-            HybridInitiatorData {
-                x25519_public_key: self.x25519_public.to_bytes(),
-                mlkem_public_key: self.mlkem.public_key_bytes(),
-            }
-        }
-
-        pub fn respond(
-            initiator_data: &HybridInitiatorData,
-        ) -> Result<(Self, HybridResponderData)> {
-            if initiator_data.mlkem_public_key.len() != MLKEM_PUBLIC_KEY_SIZE {
-                return Err(Error::Crypto(format!(
-                    "invalid initiator ML-KEM public key size: expected {}, got {}",
-                    MLKEM_PUBLIC_KEY_SIZE,
-                    initiator_data.mlkem_public_key.len()
-                )));
-            }
-
-            let x25519_secret = EphemeralSecret::random_from_rng(OsRng);
-            let x25519_public = X25519PublicKey::from(&x25519_secret);
-            let mlkem = PQKeyExchange::generate()?;
-            let (mlkem_ciphertext, _) = mlkem.encapsulate(&initiator_data.mlkem_public_key)?;
-
-            let response = HybridResponderData {
-                x25519_public_key: x25519_public.to_bytes(),
-                mlkem_ciphertext,
-            };
-
-            let handshake = Self {
-                x25519_secret: Some(x25519_secret),
-                x25519_public,
-                mlkem,
-                role: HandshakeRole::Responder,
-            };
-
-            Ok((handshake, response))
-        }
-
-        pub fn finalize(mut self, responder_data: &HybridResponderData) -> Result<HybridSharedSecret> {
-            if self.role != HandshakeRole::Initiator {
-                return Err(Error::Crypto("finalize() can only be called by initiator".into()));
-            }
-
-            let x25519_secret = self.x25519_secret.take()
-                .ok_or_else(|| Error::Crypto("X25519 secret already consumed".into()))?;
-            let peer = X25519PublicKey::from(responder_data.x25519_public_key);
-            let x25519_shared = x25519_secret.diffie_hellman(&peer);
-            let mlkem_shared = self.mlkem.decapsulate(&responder_data.mlkem_ciphertext)?;
-
-            Self::derive_hybrid_secret(x25519_shared.as_bytes(), &mlkem_shared)
-        }
-
-        pub fn complete(
-            mut self,
-            initiator_data: &HybridInitiatorData,
-            mlkem_shared: &[u8; 32],
-        ) -> Result<HybridSharedSecret> {
-            if self.role != HandshakeRole::Responder {
-                return Err(Error::Crypto("complete() can only be called by responder".into()));
-            }
-
-            let x25519_secret = self.x25519_secret.take()
-                .ok_or_else(|| Error::Crypto("X25519 secret already consumed".into()))?;
-            let peer = X25519PublicKey::from(initiator_data.x25519_public_key);
-            let x25519_shared = x25519_secret.diffie_hellman(&peer);
-
-            Self::derive_hybrid_secret(x25519_shared.as_bytes(), mlkem_shared)
-        }
-
-        fn derive_hybrid_secret(
-            x25519_shared: &[u8],
-            mlkem_shared: &[u8; 32],
-        ) -> Result<HybridSharedSecret> {
-            let mut ikm = Vec::with_capacity(x25519_shared.len() + mlkem_shared.len());
-            ikm.extend_from_slice(x25519_shared);
-            ikm.extend_from_slice(mlkem_shared);
-
-            let hkdf = Hkdf::<Sha256>::new(Some(b"ZAP-HYBRID-HANDSHAKE-v1"), &ikm);
-            let mut secret = [0u8; HYBRID_SHARED_SECRET_SIZE];
-            hkdf.expand(b"shared-secret", &mut secret)
-                .map_err(|_| Error::Crypto("HKDF expansion failed".into()))?;
-
-            ikm.zeroize();
-
-            Ok(HybridSharedSecret { secret })
-        }
-    }
-
-    pub fn hybrid_handshake() -> Result<(
-        [u8; HYBRID_SHARED_SECRET_SIZE],
-        [u8; HYBRID_SHARED_SECRET_SIZE],
-    )> {
-        let initiator = HybridHandshake::initiate()?;
-        let init_data = initiator.public_data();
-
-        let (responder, resp_data) = HybridHandshake::respond(&init_data)?;
-
-        let mlkem_for_responder = PQKeyExchange::generate()?;
-        let (_, mlkem_shared_responder) =
-            mlkem_for_responder.encapsulate(&init_data.mlkem_public_key)?;
-
-        let initiator_secret = initiator.finalize(&resp_data)?;
-        let responder_secret = responder.complete(&init_data, &mlkem_shared_responder)?;
-
-        Ok((initiator_secret.into_bytes(), responder_secret.into_bytes()))
-    }
-
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        #[test]
-        fn test_mlkem_key_exchange() {
-            let alice = PQKeyExchange::generate().unwrap();
-            let bob = PQKeyExchange::generate().unwrap();
-
-            let (ciphertext, alice_shared) = alice.encapsulate(&bob.public_key_bytes()).unwrap();
-            let bob_shared = bob.decapsulate(&ciphertext).unwrap();
-
-            assert_eq!(alice_shared, bob_shared);
-        }
-
-        #[test]
-        fn test_mlkem_invalid_public_key() {
-            let alice = PQKeyExchange::generate().unwrap();
-            let bad_pk = vec![0u8; 100];
-            assert!(alice.encapsulate(&bad_pk).is_err());
-        }
-
-        #[test]
-        fn test_mldsa_signature() {
-            let signer = PQSignature::generate().unwrap();
-            let message = b"The quick brown fox jumps over the lazy dog";
-            let signature = signer.sign(message).unwrap();
-
-            signer.verify(message, &signature).unwrap();
-
-            let verifier = PQSignature::from_public_key(&signer.public_key_bytes()).unwrap();
-            verifier.verify(message, &signature).unwrap();
-        }
-
-        #[test]
-        fn test_mldsa_invalid_signature() {
-            let signer = PQSignature::generate().unwrap();
-            let message = b"Hello, World!";
-            let signature = signer.sign(message).unwrap();
-
-            assert!(signer.verify(b"Wrong message", &signature).is_err());
-
-            let mut bad_sig = signature.clone();
-            bad_sig[0] ^= 0xFF;
-            assert!(signer.verify(message, &bad_sig).is_err());
-        }
-
-        #[test]
-        fn test_hybrid_handshake_sizes() {
-            let initiator = HybridHandshake::initiate().unwrap();
-            let init_data = initiator.public_data();
-
-            assert_eq!(init_data.x25519_public_key.len(), X25519_PUBLIC_KEY_SIZE);
-            assert_eq!(init_data.mlkem_public_key.len(), MLKEM_PUBLIC_KEY_SIZE);
-        }
-    }
-}
-
-// ── pqcrypto fallback backend ────────────────────────────────────────
-
-#[cfg(all(feature = "pq", not(feature = "luxcrypto")))]
+#[cfg(feature = "pq")]
 mod pq_impl {
     use super::*;
     use hkdf::Hkdf;
@@ -698,45 +344,39 @@ mod pq_impl {
 
 // ── Re-exports ───────────────────────────────────────────────────────
 
-#[cfg(feature = "luxcrypto")]
-pub use lux_impl::{
-    hybrid_handshake, HybridHandshake, HybridInitiatorData, HybridResponderData,
-    HybridSharedSecret, PQKeyExchange, PQSignature,
-};
-
-#[cfg(all(feature = "pq", not(feature = "luxcrypto")))]
+#[cfg(feature = "pq")]
 pub use pq_impl::{
     hybrid_handshake, HybridHandshake, HybridInitiatorData, HybridResponderData,
     HybridSharedSecret, PQKeyExchange, PQSignature,
 };
 
-// Feature-gated fallbacks when no PQ feature is enabled
-#[cfg(not(any(feature = "pq", feature = "luxcrypto")))]
+// Feature-gated fallbacks when the `pq` feature is not enabled
+#[cfg(not(feature = "pq"))]
 pub struct PQKeyExchange;
 
-#[cfg(not(any(feature = "pq", feature = "luxcrypto")))]
+#[cfg(not(feature = "pq"))]
 impl PQKeyExchange {
     pub fn generate() -> Result<Self> {
-        Err(Error::Crypto("PQ crypto requires 'pq' or 'luxcrypto' feature".into()))
+        Err(Error::Crypto("PQ crypto requires 'pq' feature".into()))
     }
 }
 
-#[cfg(not(any(feature = "pq", feature = "luxcrypto")))]
+#[cfg(not(feature = "pq"))]
 pub struct PQSignature;
 
-#[cfg(not(any(feature = "pq", feature = "luxcrypto")))]
+#[cfg(not(feature = "pq"))]
 impl PQSignature {
     pub fn generate() -> Result<Self> {
-        Err(Error::Crypto("PQ crypto requires 'pq' or 'luxcrypto' feature".into()))
+        Err(Error::Crypto("PQ crypto requires 'pq' feature".into()))
     }
 }
 
-#[cfg(not(any(feature = "pq", feature = "luxcrypto")))]
+#[cfg(not(feature = "pq"))]
 pub struct HybridHandshake;
 
-#[cfg(not(any(feature = "pq", feature = "luxcrypto")))]
+#[cfg(not(feature = "pq"))]
 impl HybridHandshake {
     pub fn initiate() -> Result<Self> {
-        Err(Error::Crypto("PQ crypto requires 'pq' or 'luxcrypto' feature".into()))
+        Err(Error::Crypto("PQ crypto requires 'pq' feature".into()))
     }
 }
