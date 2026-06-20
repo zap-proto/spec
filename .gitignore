@@ -9,6 +9,8 @@ __pycache__/
 *.egg-info/
 dist/
 .pytest_cache/
+.coverage
+coverage.xml
 
 # TypeScript
 node_modules/

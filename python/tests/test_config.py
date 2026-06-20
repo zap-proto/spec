@@ -1,6 +1,7 @@
 """Tests for zap_schema.config module."""
 
 import pytest
+
 from zap_schema.config import Config, ServerConfig, Transport
 
 
@@ -44,6 +45,39 @@ class TestConfig:
         path = Config.default_path()
         assert "zap" in str(path)
         assert "config.toml" in str(path)
+
+    def test_config_from_dict_with_transport(self):
+        """Transport string in a server entry is parsed into the enum."""
+        config = Config.from_dict(
+            {"servers": [{"name": "ws", "url": "ws://x", "transport": "websocket"}]}
+        )
+        assert config.servers[0].transport == Transport.WEBSOCKET
+
+    def test_config_load_from_file(self, tmp_path):
+        """Config.load reads and parses a TOML file."""
+        toml = tmp_path / "config.toml"
+        toml.write_text(
+            'listen = "127.0.0.1"\n'
+            "port = 7777\n"
+            'log_level = "debug"\n'
+            "[[servers]]\n"
+            'name = "alpha"\n'
+            'url = "http://alpha:1"\n'
+        )
+        config = Config.load(toml)
+        assert config.listen == "127.0.0.1"
+        assert config.port == 7777
+        assert config.log_level == "debug"
+        assert config.servers[0].name == "alpha"
+
+    def test_default_path_non_darwin(self, monkeypatch):
+        """Non-macOS platforms resolve to an XDG-style or Windows path."""
+        import platform as platform_mod
+
+        monkeypatch.setattr(platform_mod, "system", lambda: "Linux")
+        assert str(Config.default_path()).endswith(".config/zap/config.toml")
+        monkeypatch.setattr(platform_mod, "system", lambda: "Windows")
+        assert "zap" in str(Config.default_path())
 
 
 class TestServerConfig:
