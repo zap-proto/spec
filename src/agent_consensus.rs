@@ -359,7 +359,10 @@ mod tests {
         let response_id = consensus.submit_response(response).await.unwrap();
 
         let voter = make_did("Voter1");
-        consensus.vote(query_id, response_id, voter.clone()).await.unwrap();
+        consensus
+            .vote(query_id, response_id, voter.clone())
+            .await
+            .unwrap();
 
         // Second vote from same voter should fail
         let result = consensus.vote(query_id, response_id, voter).await;
@@ -379,9 +382,18 @@ mod tests {
         let r2_id = consensus.submit_response(r2).await.unwrap();
 
         // Vote: 2 for Rust, 1 for Python
-        consensus.vote(query_id, r1_id, make_did("V1")).await.unwrap();
-        consensus.vote(query_id, r1_id, make_did("V2")).await.unwrap();
-        consensus.vote(query_id, r2_id, make_did("V3")).await.unwrap();
+        consensus
+            .vote(query_id, r1_id, make_did("V1"))
+            .await
+            .unwrap();
+        consensus
+            .vote(query_id, r1_id, make_did("V2"))
+            .await
+            .unwrap();
+        consensus
+            .vote(query_id, r2_id, make_did("V3"))
+            .await
+            .unwrap();
 
         assert!(consensus.is_finalized(query_id).await);
         let result = consensus.get_result(query_id).await.unwrap();
@@ -406,9 +418,18 @@ mod tests {
         let r3 = Response::new(query_id, "C".into(), make_did("Dave"));
         let r3_id = consensus.submit_response(r3).await.unwrap();
 
-        consensus.vote(query_id, r1_id, make_did("V1")).await.unwrap();
-        consensus.vote(query_id, r2_id, make_did("V2")).await.unwrap();
-        consensus.vote(query_id, r3_id, make_did("V3")).await.unwrap();
+        consensus
+            .vote(query_id, r1_id, make_did("V1"))
+            .await
+            .unwrap();
+        consensus
+            .vote(query_id, r2_id, make_did("V2"))
+            .await
+            .unwrap();
+        consensus
+            .vote(query_id, r3_id, make_did("V3"))
+            .await
+            .unwrap();
 
         // No consensus - 33% each, threshold is 60%
         assert!(!consensus.is_finalized(query_id).await);
@@ -423,7 +444,10 @@ mod tests {
         let r1 = Response::new(query_id, "A".into(), make_did("Bob"));
         let r1_id = consensus.submit_response(r1).await.unwrap();
 
-        consensus.vote(query_id, r1_id, make_did("V1")).await.unwrap();
+        consensus
+            .vote(query_id, r1_id, make_did("V1"))
+            .await
+            .unwrap();
 
         let counts = consensus.get_vote_counts(query_id).await.unwrap();
         assert_eq!(counts.get(&r1_id), Some(&1));

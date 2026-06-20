@@ -125,7 +125,9 @@ impl Did {
         let id = parts[1].to_string();
 
         if id.is_empty() {
-            return Err(Error::Identity("DID identifier cannot be empty".to_string()));
+            return Err(Error::Identity(
+                "DID identifier cannot be empty".to_string(),
+            ));
         }
 
         Ok(Self { method, id })
@@ -392,12 +394,14 @@ impl DidDocument {
 
     /// Serialize to JSON
     pub fn to_json(&self) -> Result<String> {
-        serde_json::to_string_pretty(self).map_err(|e| Error::Identity(format!("JSON serialization failed: {}", e)))
+        serde_json::to_string_pretty(self)
+            .map_err(|e| Error::Identity(format!("JSON serialization failed: {}", e)))
     }
 
     /// Deserialize from JSON
     pub fn from_json(json: &str) -> Result<Self> {
-        serde_json::from_str(json).map_err(|e| Error::Identity(format!("JSON deserialization failed: {}", e)))
+        serde_json::from_str(json)
+            .map_err(|e| Error::Identity(format!("JSON deserialization failed: {}", e)))
     }
 }
 
@@ -569,9 +573,7 @@ impl NodeIdentity {
     /// Returns an error when pq feature is disabled.
     #[cfg(not(feature = "pq"))]
     pub fn sign(&self, _message: &[u8]) -> Result<Vec<u8>> {
-        Err(Error::Identity(
-            "signing requires 'pq' feature".to_string(),
-        ))
+        Err(Error::Identity("signing requires 'pq' feature".to_string()))
     }
 
     /// Verify a signature against this node's public key
@@ -737,7 +739,10 @@ mod tests {
         let did = Did::parse("did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK").unwrap();
         let doc = did.document().unwrap();
 
-        assert_eq!(doc.id, "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK");
+        assert_eq!(
+            doc.id,
+            "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"
+        );
         assert!(!doc.verification_method.is_empty());
         assert!(!doc.authentication.is_empty());
         assert!(!doc.service.is_empty());
@@ -752,7 +757,10 @@ mod tests {
         let parsed = DidDocument::from_json(&json).unwrap();
 
         assert_eq!(doc.id, parsed.id);
-        assert_eq!(doc.verification_method.len(), parsed.verification_method.len());
+        assert_eq!(
+            doc.verification_method.len(),
+            parsed.verification_method.len()
+        );
     }
 
     #[test]

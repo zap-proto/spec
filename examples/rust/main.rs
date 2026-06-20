@@ -5,8 +5,8 @@
 //!
 //! Run with: cargo run --example chat_client
 
-use zap::{Client, Result};
 use serde_json::json;
+use zap::{Client, Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -36,10 +36,15 @@ async fn main() -> Result<()> {
 
     // Call a tool
     println!("Calling 'search' tool...");
-    let result = client.call_tool("search", json!({
-        "query": "rust programming",
-        "limit": 5
-    })).await?;
+    let result = client
+        .call_tool(
+            "search",
+            json!({
+                "query": "rust programming",
+                "limit": 5
+            }),
+        )
+        .await?;
 
     if result.is_error {
         println!("Tool error: {}", result.error.unwrap_or_default());
@@ -70,20 +75,33 @@ async fn main() -> Result<()> {
     println!("------------------");
     let prompts = client.list_prompts().await?;
     for prompt in &prompts {
-        println!("  {} - {}", prompt.name, prompt.description.as_deref().unwrap_or(""));
+        println!(
+            "  {} - {}",
+            prompt.name,
+            prompt.description.as_deref().unwrap_or("")
+        );
     }
     println!();
 
     // Get a prompt
     println!("Getting 'code-review' prompt...");
-    let messages = client.get_prompt("code-review", json!({
-        "language": "rust",
-        "file": "src/main.rs"
-    })).await?;
+    let messages = client
+        .get_prompt(
+            "code-review",
+            json!({
+                "language": "rust",
+                "file": "src/main.rs"
+            }),
+        )
+        .await?;
 
     println!("Prompt messages:");
     for msg in &messages {
-        println!("  [{}] {}", msg.role, &msg.content[..50.min(msg.content.len())]);
+        println!(
+            "  [{}] {}",
+            msg.role,
+            &msg.content[..50.min(msg.content.len())]
+        );
     }
 
     println!("\nDone!");
@@ -93,7 +111,7 @@ async fn main() -> Result<()> {
 /// Example: Using post-quantum cryptography
 #[allow(dead_code)]
 fn pq_crypto_example() -> Result<()> {
-    use zap::crypto::{MLKem, MLDsa};
+    use zap::crypto::{MLDsa, MLKem};
 
     // ML-KEM key encapsulation
     let (pk, sk) = MLKem::generate_keypair()?;

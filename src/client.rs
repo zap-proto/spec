@@ -25,8 +25,8 @@
 //! }
 //! ```
 
-use crate::{Error, Result};
 use crate::zap_capnp;
+use crate::{Error, Result};
 use capnp_rpc::{rpc_twoparty_capnp, twoparty, RpcSystem};
 use futures::io::{BufReader, BufWriter};
 use serde_json::Value;
@@ -37,7 +37,8 @@ use url::Url;
 
 /// Helper to convert Cap'n Proto text to String, handling UTF-8 errors
 fn text_to_string(reader: capnp::text::Reader<'_>) -> Result<String> {
-    reader.to_str()
+    reader
+        .to_str()
         .map(|s| s.to_string())
         .map_err(|e| Error::Protocol(format!("invalid UTF-8: {}", e)))
 }
@@ -144,23 +145,30 @@ pub struct ResourceStream {
 
 impl ResourceStream {
     fn new(client: zap_capnp::resource_stream::Client) -> Self {
-        Self { stream_client: client }
+        Self {
+            stream_client: client,
+        }
     }
 
     /// Get the next resource content update
     pub async fn next(&self) -> Result<Option<ResourceContent>> {
         let request = self.stream_client.next_request();
-        let response = request.send().promise.await
+        let response = request
+            .send()
+            .promise
+            .await
             .map_err(|e| Error::Protocol(format!("stream next failed: {}", e)))?;
 
-        let results = response.get()
+        let results = response
+            .get()
             .map_err(|e| Error::Protocol(format!("failed to get results: {}", e)))?;
 
         if results.get_done() {
             return Ok(None);
         }
 
-        let content = results.get_content()
+        let content = results
+            .get_content()
             .map_err(|e| Error::Protocol(format!("failed to get content: {}", e)))?;
 
         Ok(Some(convert_resource_content(content)?))
@@ -169,7 +177,10 @@ impl ResourceStream {
     /// Cancel the stream subscription
     pub async fn cancel(&self) -> Result<()> {
         let request = self.stream_client.cancel_request();
-        request.send().promise.await
+        request
+            .send()
+            .promise
+            .await
             .map_err(|e| Error::Protocol(format!("stream cancel failed: {}", e)))?;
         Ok(())
     }
@@ -233,7 +244,8 @@ impl Client {
             .await
             .map_err(|e| Error::Connection(format!("failed to connect to {}: {}", addr, e)))?;
 
-        stream.set_nodelay(true)
+        stream
+            .set_nodelay(true)
             .map_err(|e| Error::Connection(format!("failed to set TCP_NODELAY: {}", e)))?;
 
         Self::from_tcp_stream(stream).await
@@ -299,21 +311,29 @@ impl Client {
             client_info.set_version(version);
         }
 
-        let response = request.send().promise.await
+        let response = request
+            .send()
+            .promise
+            .await
             .map_err(|e| Error::Protocol(format!("init failed: {}", e)))?;
 
-        let results = response.get()
+        let results = response
+            .get()
             .map_err(|e| Error::Protocol(format!("failed to get init results: {}", e)))?;
 
-        let server = results.get_server()
+        let server = results
+            .get_server()
             .map_err(|e| Error::Protocol(format!("failed to get server info: {}", e)))?;
 
-        let caps = server.get_capabilities()
+        let caps = server
+            .get_capabilities()
             .map_err(|e| Error::Protocol(format!("failed to get capabilities: {}", e)))?;
 
-        let name_reader = server.get_name()
+        let name_reader = server
+            .get_name()
             .map_err(|e| Error::Protocol(format!("failed to get server name: {}", e)))?;
-        let version_reader = server.get_version()
+        let version_reader = server
+            .get_version()
             .map_err(|e| Error::Protocol(format!("failed to get server version: {}", e)))?;
 
         Ok(ServerInfo {
@@ -340,25 +360,34 @@ impl Client {
     /// ```
     pub async fn list_tools(&self) -> Result<Vec<Tool>> {
         let request = self.zap_client.list_tools_request();
-        let response = request.send().promise.await
+        let response = request
+            .send()
+            .promise
+            .await
             .map_err(|e| Error::Protocol(format!("list_tools failed: {}", e)))?;
 
-        let results = response.get()
+        let results = response
+            .get()
             .map_err(|e| Error::Protocol(format!("failed to get list_tools results: {}", e)))?;
 
-        let tool_list = results.get_tools()
+        let tool_list = results
+            .get_tools()
             .map_err(|e| Error::Protocol(format!("failed to get tool list: {}", e)))?;
 
-        let tools = tool_list.get_tools()
+        let tools = tool_list
+            .get_tools()
             .map_err(|e| Error::Protocol(format!("failed to get tools: {}", e)))?;
 
         let mut result = Vec::with_capacity(tools.len() as usize);
         for tool in tools.iter() {
-            let name_reader = tool.get_name()
+            let name_reader = tool
+                .get_name()
                 .map_err(|e| Error::Protocol(format!("failed to get tool name: {}", e)))?;
-            let desc_reader = tool.get_description()
+            let desc_reader = tool
+                .get_description()
                 .map_err(|e| Error::Protocol(format!("failed to get tool description: {}", e)))?;
-            let schema_bytes = tool.get_schema()
+            let schema_bytes = tool
+                .get_schema()
                 .map_err(|e| Error::Protocol(format!("failed to get tool schema: {}", e)))?;
             let schema: Value = if schema_bytes.is_empty() {
                 Value::Object(serde_json::Map::new())
@@ -412,24 +441,31 @@ impl Client {
             call.set_args(&args_bytes);
         }
 
-        let response = request.send().promise.await
+        let response = request
+            .send()
+            .promise
+            .await
             .map_err(|e| Error::Protocol(format!("call_tool failed: {}", e)))?;
 
-        let results = response.get()
+        let results = response
+            .get()
             .map_err(|e| Error::Protocol(format!("failed to get call_tool results: {}", e)))?;
 
-        let tool_result = results.get_result()
+        let tool_result = results
+            .get_result()
             .map_err(|e| Error::Protocol(format!("failed to get tool result: {}", e)))?;
 
         // Check for error
-        let error_reader = tool_result.get_error()
+        let error_reader = tool_result
+            .get_error()
             .map_err(|e| Error::Protocol(format!("failed to get error field: {}", e)))?;
         if !error_reader.is_empty() {
             return Err(Error::ToolCallFailed(text_to_string(error_reader)?));
         }
 
         // Parse content
-        let content_bytes = tool_result.get_content()
+        let content_bytes = tool_result
+            .get_content()
             .map_err(|e| Error::Protocol(format!("failed to get content: {}", e)))?;
 
         if content_bytes.is_empty() {
@@ -453,27 +489,37 @@ impl Client {
     /// ```
     pub async fn list_resources(&self) -> Result<Vec<Resource>> {
         let request = self.zap_client.list_resources_request();
-        let response = request.send().promise.await
+        let response = request
+            .send()
+            .promise
+            .await
             .map_err(|e| Error::Protocol(format!("list_resources failed: {}", e)))?;
 
-        let results = response.get()
+        let results = response
+            .get()
             .map_err(|e| Error::Protocol(format!("failed to get list_resources results: {}", e)))?;
 
-        let resource_list = results.get_resources()
+        let resource_list = results
+            .get_resources()
             .map_err(|e| Error::Protocol(format!("failed to get resource list: {}", e)))?;
 
-        let resources = resource_list.get_resources()
+        let resources = resource_list
+            .get_resources()
             .map_err(|e| Error::Protocol(format!("failed to get resources: {}", e)))?;
 
         let mut result = Vec::with_capacity(resources.len() as usize);
         for resource in resources.iter() {
-            let uri_reader = resource.get_uri()
+            let uri_reader = resource
+                .get_uri()
                 .map_err(|e| Error::Protocol(format!("failed to get resource uri: {}", e)))?;
-            let name_reader = resource.get_name()
+            let name_reader = resource
+                .get_name()
                 .map_err(|e| Error::Protocol(format!("failed to get resource name: {}", e)))?;
-            let desc_reader = resource.get_description()
-                .map_err(|e| Error::Protocol(format!("failed to get resource description: {}", e)))?;
-            let mime_reader = resource.get_mime_type()
+            let desc_reader = resource.get_description().map_err(|e| {
+                Error::Protocol(format!("failed to get resource description: {}", e))
+            })?;
+            let mime_reader = resource
+                .get_mime_type()
                 .map_err(|e| Error::Protocol(format!("failed to get resource mime_type: {}", e)))?;
 
             result.push(Resource {
@@ -502,13 +548,18 @@ impl Client {
         let mut request = self.zap_client.read_resource_request();
         request.get().set_uri(uri);
 
-        let response = request.send().promise.await
+        let response = request
+            .send()
+            .promise
+            .await
             .map_err(|e| Error::Protocol(format!("read_resource failed: {}", e)))?;
 
-        let results = response.get()
+        let results = response
+            .get()
             .map_err(|e| Error::Protocol(format!("failed to get read_resource results: {}", e)))?;
 
-        let content = results.get_content()
+        let content = results
+            .get_content()
             .map_err(|e| Error::Protocol(format!("failed to get content: {}", e)))?;
 
         convert_resource_content(content)
@@ -530,13 +581,18 @@ impl Client {
         let mut request = self.zap_client.subscribe_request();
         request.get().set_uri(uri);
 
-        let response = request.send().promise.await
+        let response = request
+            .send()
+            .promise
+            .await
             .map_err(|e| Error::Protocol(format!("subscribe failed: {}", e)))?;
 
-        let results = response.get()
+        let results = response
+            .get()
             .map_err(|e| Error::Protocol(format!("failed to get subscribe results: {}", e)))?;
 
-        let stream_client = results.get_stream()
+        let stream_client = results
+            .get_stream()
             .map_err(|e| Error::Protocol(format!("failed to get stream: {}", e)))?;
 
         Ok(ResourceStream::new(stream_client))
@@ -554,29 +610,38 @@ impl Client {
     /// ```
     pub async fn list_prompts(&self) -> Result<Vec<Prompt>> {
         let request = self.zap_client.list_prompts_request();
-        let response = request.send().promise.await
+        let response = request
+            .send()
+            .promise
+            .await
             .map_err(|e| Error::Protocol(format!("list_prompts failed: {}", e)))?;
 
-        let results = response.get()
+        let results = response
+            .get()
             .map_err(|e| Error::Protocol(format!("failed to get list_prompts results: {}", e)))?;
 
-        let prompt_list = results.get_prompts()
+        let prompt_list = results
+            .get_prompts()
             .map_err(|e| Error::Protocol(format!("failed to get prompt list: {}", e)))?;
 
-        let prompts = prompt_list.get_prompts()
+        let prompts = prompt_list
+            .get_prompts()
             .map_err(|e| Error::Protocol(format!("failed to get prompts: {}", e)))?;
 
         let mut result = Vec::with_capacity(prompts.len() as usize);
         for prompt in prompts.iter() {
-            let arguments = prompt.get_arguments()
+            let arguments = prompt
+                .get_arguments()
                 .map_err(|e| Error::Protocol(format!("failed to get prompt arguments: {}", e)))?;
 
             let mut args = Vec::with_capacity(arguments.len() as usize);
             for arg in arguments.iter() {
-                let arg_name = arg.get_name()
+                let arg_name = arg
+                    .get_name()
                     .map_err(|e| Error::Protocol(format!("failed to get arg name: {}", e)))?;
-                let arg_desc = arg.get_description()
-                    .map_err(|e| Error::Protocol(format!("failed to get arg description: {}", e)))?;
+                let arg_desc = arg.get_description().map_err(|e| {
+                    Error::Protocol(format!("failed to get arg description: {}", e))
+                })?;
                 args.push(PromptArgument {
                     name: text_to_string(arg_name)?,
                     description: text_to_string(arg_desc)?,
@@ -584,9 +649,11 @@ impl Client {
                 });
             }
 
-            let prompt_name = prompt.get_name()
+            let prompt_name = prompt
+                .get_name()
                 .map_err(|e| Error::Protocol(format!("failed to get prompt name: {}", e)))?;
-            let prompt_desc = prompt.get_description()
+            let prompt_desc = prompt
+                .get_description()
                 .map_err(|e| Error::Protocol(format!("failed to get prompt description: {}", e)))?;
 
             result.push(Prompt {
@@ -617,7 +684,11 @@ impl Client {
     ///     println!("{:?}: {:?}", msg.role, msg.content);
     /// }
     /// ```
-    pub async fn get_prompt(&self, name: &str, args: &[(&str, &str)]) -> Result<Vec<PromptMessage>> {
+    pub async fn get_prompt(
+        &self,
+        name: &str,
+        args: &[(&str, &str)],
+    ) -> Result<Vec<PromptMessage>> {
         let mut request = self.zap_client.get_prompt_request();
         {
             let mut params = request.get();
@@ -632,18 +703,24 @@ impl Client {
             }
         }
 
-        let response = request.send().promise.await
+        let response = request
+            .send()
+            .promise
+            .await
             .map_err(|e| Error::Protocol(format!("get_prompt failed: {}", e)))?;
 
-        let results = response.get()
+        let results = response
+            .get()
             .map_err(|e| Error::Protocol(format!("failed to get get_prompt results: {}", e)))?;
 
-        let messages = results.get_messages()
+        let messages = results
+            .get_messages()
             .map_err(|e| Error::Protocol(format!("failed to get messages: {}", e)))?;
 
         let mut result = Vec::with_capacity(messages.len() as usize);
         for msg in messages.iter() {
-            let role = match msg.get_role()
+            let role = match msg
+                .get_role()
                 .map_err(|e| Error::Protocol(format!("failed to get role: {}", e)))?
             {
                 zap_capnp::prompt_message::Role::User => Role::User,
@@ -651,10 +728,12 @@ impl Client {
                 zap_capnp::prompt_message::Role::System => Role::System,
             };
 
-            let content_reader = msg.get_content()
+            let content_reader = msg
+                .get_content()
                 .map_err(|e| Error::Protocol(format!("failed to get content: {}", e)))?;
 
-            let content = match content_reader.which()
+            let content = match content_reader
+                .which()
                 .map_err(|e| Error::Protocol(format!("failed to get content type: {}", e)))?
             {
                 zap_capnp::prompt_message::content::Which::Text(text_reader) => {
@@ -665,11 +744,15 @@ impl Client {
                 zap_capnp::prompt_message::content::Which::Image(image) => {
                     let image = image
                         .map_err(|e| Error::Protocol(format!("failed to get image: {}", e)))?;
-                    let mime_reader = image.get_mime_type()
-                        .map_err(|e| Error::Protocol(format!("failed to get image mime_type: {}", e)))?;
+                    let mime_reader = image.get_mime_type().map_err(|e| {
+                        Error::Protocol(format!("failed to get image mime_type: {}", e))
+                    })?;
                     MessageContent::Image {
-                        data: image.get_data()
-                            .map_err(|e| Error::Protocol(format!("failed to get image data: {}", e)))?
+                        data: image
+                            .get_data()
+                            .map_err(|e| {
+                                Error::Protocol(format!("failed to get image data: {}", e))
+                            })?
                             .to_vec(),
                         mime_type: text_to_string(mime_reader)?,
                     }
@@ -722,7 +805,10 @@ impl Client {
             }
         }
 
-        request.send().promise.await
+        request
+            .send()
+            .promise
+            .await
             .map_err(|e| Error::Protocol(format!("log failed: {}", e)))?;
 
         Ok(())
@@ -732,7 +818,8 @@ impl Client {
     ///
     /// This will complete any pending requests before closing the connection.
     pub async fn disconnect(self) -> Result<()> {
-        self.disconnector.await
+        self.disconnector
+            .await
             .map_err(|e| Error::Connection(format!("disconnect failed: {}", e)))
     }
 }
@@ -748,33 +835,40 @@ pub enum LogLevel {
 
 /// Convert a Cap'n Proto ResourceContent to our Rust type
 fn convert_resource_content(
-    content: zap_capnp::resource_content::Reader<'_>
+    content: zap_capnp::resource_content::Reader<'_>,
 ) -> Result<ResourceContent> {
-    let uri_reader = content.get_uri()
+    let uri_reader = content
+        .get_uri()
         .map_err(|e| Error::Protocol(format!("failed to get uri: {}", e)))?;
-    let uri = uri_reader.to_str()
+    let uri = uri_reader
+        .to_str()
         .map_err(|e| Error::Protocol(format!("invalid utf8 in uri: {}", e)))?
         .to_string();
 
-    let mime_reader = content.get_mime_type()
+    let mime_reader = content
+        .get_mime_type()
         .map_err(|e| Error::Protocol(format!("failed to get mime_type: {}", e)))?;
-    let mime_type = mime_reader.to_str()
+    let mime_type = mime_reader
+        .to_str()
         .map_err(|e| Error::Protocol(format!("invalid utf8 in mime_type: {}", e)))?
         .to_string();
 
-    let content_data = match content.get_content().which()
+    let content_data = match content
+        .get_content()
+        .which()
         .map_err(|e| Error::Protocol(format!("failed to get content type: {}", e)))?
     {
         zap_capnp::resource_content::content::Which::Text(text) => {
-            let text_reader = text
-                .map_err(|e| Error::Protocol(format!("failed to get text: {}", e)))?;
-            let text_str = text_reader.to_str()
+            let text_reader =
+                text.map_err(|e| Error::Protocol(format!("failed to get text: {}", e)))?;
+            let text_str = text_reader
+                .to_str()
                 .map_err(|e| Error::Protocol(format!("invalid utf8 in text: {}", e)))?;
             Content::Text(text_str.to_string())
         }
         zap_capnp::resource_content::content::Which::Blob(blob) => {
-            let blob_data = blob
-                .map_err(|e| Error::Protocol(format!("failed to get blob: {}", e)))?;
+            let blob_data =
+                blob.map_err(|e| Error::Protocol(format!("failed to get blob: {}", e)))?;
             Content::Blob(blob_data.to_vec())
         }
     };

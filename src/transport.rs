@@ -15,11 +15,11 @@
 //! ```
 
 use crate::error::{Error, Result};
-use std::pin::Pin;
 use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
-use tokio::io::{AsyncRead, AsyncWrite, AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
-use tokio::net::{TcpStream, TcpListener};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader, BufWriter};
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::Mutex;
 use url::Url;
 
@@ -150,7 +150,8 @@ impl Transport for TcpTransport {
         let data = data.to_vec();
         Box::pin(async move {
             let mut guard = self.stream.lock().await;
-            let stream = guard.as_mut()
+            let stream = guard
+                .as_mut()
                 .ok_or_else(|| Error::Transport("connection closed".into()))?;
             stream.send(&data).await
         })
@@ -159,7 +160,8 @@ impl Transport for TcpTransport {
     fn recv(&self) -> Pin<Box<dyn Future<Output = Result<Vec<u8>>> + Send + '_>> {
         Box::pin(async move {
             let mut guard = self.stream.lock().await;
-            let stream = guard.as_mut()
+            let stream = guard
+                .as_mut()
                 .ok_or_else(|| Error::Transport("connection closed".into()))?;
             stream.recv().await
         })
@@ -221,7 +223,7 @@ impl TcpTransportListener {
 #[cfg(unix)]
 mod unix_transport {
     use super::*;
-    use tokio::net::{UnixStream, UnixListener};
+    use tokio::net::{UnixListener, UnixStream};
 
     /// Unix socket transport
     pub struct UnixTransport {
@@ -234,9 +236,13 @@ mod unix_transport {
         /// Connect to a Unix socket
         pub async fn connect(path: &str) -> Result<Self> {
             let stream = UnixStream::connect(path).await?;
-            let local_addr = stream.local_addr().ok()
+            let local_addr = stream
+                .local_addr()
+                .ok()
                 .and_then(|a| a.as_pathname().map(|p| p.to_string_lossy().into_owned()));
-            let peer_addr = stream.peer_addr().ok()
+            let peer_addr = stream
+                .peer_addr()
+                .ok()
                 .and_then(|a| a.as_pathname().map(|p| p.to_string_lossy().into_owned()));
 
             let framed = FramedStream::new(stream);
@@ -250,9 +256,13 @@ mod unix_transport {
 
         /// Create from existing stream
         pub fn from_stream(stream: UnixStream) -> Self {
-            let local_addr = stream.local_addr().ok()
+            let local_addr = stream
+                .local_addr()
+                .ok()
                 .and_then(|a| a.as_pathname().map(|p| p.to_string_lossy().into_owned()));
-            let peer_addr = stream.peer_addr().ok()
+            let peer_addr = stream
+                .peer_addr()
+                .ok()
                 .and_then(|a| a.as_pathname().map(|p| p.to_string_lossy().into_owned()));
             let framed = FramedStream::new(stream);
 
@@ -269,7 +279,8 @@ mod unix_transport {
             let data = data.to_vec();
             Box::pin(async move {
                 let mut guard = self.stream.lock().await;
-                let stream = guard.as_mut()
+                let stream = guard
+                    .as_mut()
                     .ok_or_else(|| Error::Transport("connection closed".into()))?;
                 stream.send(&data).await
             })
@@ -278,7 +289,8 @@ mod unix_transport {
         fn recv(&self) -> Pin<Box<dyn Future<Output = Result<Vec<u8>>> + Send + '_>> {
             Box::pin(async move {
                 let mut guard = self.stream.lock().await;
-                let stream = guard.as_mut()
+                let stream = guard
+                    .as_mut()
                     .ok_or_else(|| Error::Transport("connection closed".into()))?;
                 stream.recv().await
             })
@@ -362,7 +374,8 @@ impl WebSocketTransport {
     pub async fn connect(url: &str) -> Result<Self> {
         use tokio_tungstenite::connect_async;
 
-        let (ws_stream, _response) = connect_async(url).await
+        let (ws_stream, _response) = connect_async(url)
+            .await
             .map_err(|e| Error::Transport(format!("WebSocket connect failed: {}", e)))?;
 
         Ok(Self {
@@ -381,9 +394,12 @@ impl Transport for WebSocketTransport {
         let data = data.to_vec();
         Box::pin(async move {
             let mut guard = self.ws.lock().await;
-            let ws = guard.as_mut()
+            let ws = guard
+                .as_mut()
                 .ok_or_else(|| Error::Transport("connection closed".into()))?;
-            ws.inner.send(Message::Binary(data.into())).await
+            ws.inner
+                .send(Message::Binary(data.into()))
+                .await
                 .map_err(|e| Error::Transport(format!("WebSocket send failed: {}", e)))
         })
     }
@@ -394,7 +410,8 @@ impl Transport for WebSocketTransport {
 
         Box::pin(async move {
             let mut guard = self.ws.lock().await;
-            let ws = guard.as_mut()
+            let ws = guard
+                .as_mut()
                 .ok_or_else(|| Error::Transport("connection closed".into()))?;
 
             loop {
@@ -402,9 +419,13 @@ impl Transport for WebSocketTransport {
                     Some(Ok(Message::Binary(data))) => return Ok(data.to_vec()),
                     Some(Ok(Message::Text(text))) => return Ok(text.into_bytes()),
                     Some(Ok(Message::Ping(_))) | Some(Ok(Message::Pong(_))) => continue,
-                    Some(Ok(Message::Close(_))) => return Err(Error::Transport("connection closed".into())),
+                    Some(Ok(Message::Close(_))) => {
+                        return Err(Error::Transport("connection closed".into()))
+                    }
                     Some(Ok(Message::Frame(_))) => continue,
-                    Some(Err(e)) => return Err(Error::Transport(format!("WebSocket recv failed: {}", e))),
+                    Some(Err(e)) => {
+                        return Err(Error::Transport(format!("WebSocket recv failed: {}", e)))
+                    }
                     None => return Err(Error::Transport("connection closed".into())),
                 }
             }
@@ -464,7 +485,8 @@ impl UdpTransport {
     /// Connect to a remote UDP address (sets default destination)
     pub async fn connect(local_addr: &str, peer_addr: &str) -> Result<Self> {
         let socket = tokio::net::UdpSocket::bind(local_addr).await?;
-        let peer: std::net::SocketAddr = peer_addr.parse()
+        let peer: std::net::SocketAddr = peer_addr
+            .parse()
             .map_err(|e| Error::Transport(format!("invalid peer address: {}", e)))?;
         socket.connect(peer).await?;
         let local = socket.local_addr()?.to_string();
@@ -478,7 +500,8 @@ impl UdpTransport {
 
     /// Send a datagram to a specific address (connectionless)
     pub async fn send_to(&self, data: &[u8], addr: &str) -> Result<()> {
-        let peer: std::net::SocketAddr = addr.parse()
+        let peer: std::net::SocketAddr = addr
+            .parse()
             .map_err(|e| Error::Transport(format!("invalid address: {}", e)))?;
 
         if data.len() > MAX_MESSAGE_SIZE {
@@ -570,9 +593,13 @@ impl StdioTransport {
             .spawn()
             .map_err(|e| Error::Transport(format!("failed to spawn process: {}", e)))?;
 
-        let stdin = child.stdin.take()
+        let stdin = child
+            .stdin
+            .take()
             .ok_or_else(|| Error::Transport("failed to capture stdin".into()))?;
-        let stdout = child.stdout.take()
+        let stdout = child
+            .stdout
+            .take()
             .ok_or_else(|| Error::Transport("failed to capture stdout".into()))?;
 
         Ok(Self {
@@ -587,11 +614,14 @@ impl StdioTransport {
     pub async fn from_url(url: &Url) -> Result<Self> {
         let command = url.path();
         if command.is_empty() {
-            return Err(Error::Transport("stdio URL must specify command path".into()));
+            return Err(Error::Transport(
+                "stdio URL must specify command path".into(),
+            ));
         }
 
         // Parse query parameters as arguments
-        let args: Vec<&str> = url.query()
+        let args: Vec<&str> = url
+            .query()
             .map(|q| q.split('&').collect())
             .unwrap_or_default();
 
@@ -604,7 +634,8 @@ impl Transport for StdioTransport {
         let data = data.to_vec();
         Box::pin(async move {
             let mut guard = self.stdin.lock().await;
-            let stdin = guard.as_mut()
+            let stdin = guard
+                .as_mut()
                 .ok_or_else(|| Error::Transport("stdin closed".into()))?;
 
             if data.len() > MAX_MESSAGE_SIZE {
@@ -628,7 +659,8 @@ impl Transport for StdioTransport {
     fn recv(&self) -> Pin<Box<dyn Future<Output = Result<Vec<u8>>> + Send + '_>> {
         Box::pin(async move {
             let mut guard = self.stdout.lock().await;
-            let stdout = guard.as_mut()
+            let stdout = guard
+                .as_mut()
                 .ok_or_else(|| Error::Transport("stdout closed".into()))?;
 
             // Read length prefix
@@ -773,7 +805,8 @@ impl Transport for HttpSseTransport {
         let url = format!("{}/message", self.base_url);
 
         Box::pin(async move {
-            client.post(&url)
+            client
+                .post(&url)
                 .header("Content-Type", "application/json")
                 .body(data)
                 .send()
@@ -868,11 +901,9 @@ pub async fn connect(url: &str) -> Result<Box<dyn Transport>> {
             Ok(Box::new(transport))
         }
         #[cfg(not(feature = "mcp"))]
-        "http" | "https" => {
-            Err(Error::Transport(
-                "HTTP/SSE transport requires 'mcp' feature".into()
-            ))
-        }
+        "http" | "https" => Err(Error::Transport(
+            "HTTP/SSE transport requires 'mcp' feature".into(),
+        )),
         "udp" => {
             // UDP transport for low-latency fire-and-forget messaging
             let host = parsed.host_str().unwrap_or("127.0.0.1");
@@ -881,9 +912,7 @@ pub async fn connect(url: &str) -> Result<Box<dyn Transport>> {
             let transport = UdpTransport::connect("0.0.0.0:0", &peer_addr).await?;
             Ok(Box::new(transport))
         }
-        "zt" => {
-            Err(Error::Transport("zt transport not supported".into()))
-        }
+        "zt" => Err(Error::Transport("zt transport not supported".into())),
         _ => Err(Error::Transport(format!(
             "unsupported URL scheme: {}",
             parsed.scheme()
@@ -984,7 +1013,9 @@ mod tests {
         let server_addr = server.local_addr().unwrap();
 
         // Connect client to server
-        let client = UdpTransport::connect("127.0.0.1:0", &server_addr).await.unwrap();
+        let client = UdpTransport::connect("127.0.0.1:0", &server_addr)
+            .await
+            .unwrap();
         let client_addr = client.local_addr().unwrap();
 
         // Client sends to server
@@ -1011,7 +1042,9 @@ mod tests {
         let recv_addr = receiver.local_addr().unwrap();
 
         // Create connected sender
-        let sender = UdpTransport::connect("127.0.0.1:0", &recv_addr).await.unwrap();
+        let sender = UdpTransport::connect("127.0.0.1:0", &recv_addr)
+            .await
+            .unwrap();
 
         // Connected mode should report connected
         assert!(sender.is_connected());

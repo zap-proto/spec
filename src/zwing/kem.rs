@@ -6,8 +6,8 @@
 //! Shared secret  = SHA3-256("\./X-Wing" || ssM || ssX || ctX || pkX) = 32 bytes.
 
 use pqcrypto_mlkem::mlkem768::{
-    self, decapsulate as mlkem_decapsulate, encapsulate as mlkem_encapsulate, keypair as mlkem_keypair,
-    PublicKey as MlkemPublicKey, SecretKey as MlkemSecretKey,
+    self, decapsulate as mlkem_decapsulate, encapsulate as mlkem_encapsulate,
+    keypair as mlkem_keypair, PublicKey as MlkemPublicKey, SecretKey as MlkemSecretKey,
 };
 use pqcrypto_traits::kem::{
     Ciphertext as KemCiphertext, PublicKey as KemPublicKey, SecretKey as KemSecretKey,
@@ -93,9 +93,7 @@ impl XWingPrivateKey {
 
 /// Encapsulate to `recipient`. Returns (ciphertext, 32-byte shared
 /// secret). Uses `OsRng` internally.
-pub fn xwing_encapsulate(
-    recipient: &XWingPublicKey,
-) -> Result<(Vec<u8>, [u8; XWING_SHARED_SIZE])> {
+pub fn xwing_encapsulate(recipient: &XWingPublicKey) -> Result<(Vec<u8>, [u8; XWING_SHARED_SIZE])> {
     // ML-KEM encapsulation.
     let (ss_m, ct_m) = mlkem_encapsulate(&recipient.mlkem_pub);
 

@@ -10,7 +10,10 @@
 //! This module implements MCP (Model Context Protocol) gateway functionality
 //! allowing ZAP to act as a unified interface to multiple MCP servers.
 
-use crate::{Config, Result, Error, config::{ServerConfig, Transport, Auth}};
+use crate::{
+    config::{Auth, ServerConfig, Transport},
+    Config, Error, Result,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -189,7 +192,11 @@ pub struct StdioTransport {
 
 impl StdioTransport {
     /// Spawn a subprocess and connect via stdio
-    pub async fn spawn(command: &str, args: &[String], env: Option<&HashMap<String, String>>) -> Result<Self> {
+    pub async fn spawn(
+        command: &str,
+        args: &[String],
+        env: Option<&HashMap<String, String>>,
+    ) -> Result<Self> {
         let mut cmd = Command::new(command);
         cmd.args(args)
             .stdin(Stdio::piped())
@@ -202,12 +209,17 @@ impl StdioTransport {
             }
         }
 
-        let mut child = cmd.spawn()
+        let mut child = cmd
+            .spawn()
             .map_err(|e| Error::Transport(format!("failed to spawn {}: {}", command, e)))?;
 
-        let stdin = child.stdin.take()
+        let stdin = child
+            .stdin
+            .take()
             .ok_or_else(|| Error::Transport("failed to get stdin".into()))?;
-        let stdout = child.stdout.take()
+        let stdout = child
+            .stdout
+            .take()
             .ok_or_else(|| Error::Transport("failed to get stdout".into()))?;
 
         let pending: Arc<RwLock<HashMap<String, oneshot::Sender<JsonRpcResponse>>>> =
@@ -270,9 +282,13 @@ impl StdioTransport {
         let line = serde_json::to_string(&req)? + "\n";
         {
             let mut stdin = self.stdin.lock().await;
-            stdin.write_all(line.as_bytes()).await
+            stdin
+                .write_all(line.as_bytes())
+                .await
                 .map_err(|e| Error::Transport(format!("write failed: {}", e)))?;
-            stdin.flush().await
+            stdin
+                .flush()
+                .await
                 .map_err(|e| Error::Transport(format!("flush failed: {}", e)))?;
         }
 
@@ -290,9 +306,13 @@ impl StdioTransport {
     pub async fn notify(&self, notif: JsonRpcNotification) -> Result<()> {
         let line = serde_json::to_string(&notif)? + "\n";
         let mut stdin = self.stdin.lock().await;
-        stdin.write_all(line.as_bytes()).await
+        stdin
+            .write_all(line.as_bytes())
+            .await
             .map_err(|e| Error::Transport(format!("write failed: {}", e)))?;
-        stdin.flush().await
+        stdin
+            .flush()
+            .await
             .map_err(|e| Error::Transport(format!("flush failed: {}", e)))?;
         Ok(())
     }
@@ -300,7 +320,8 @@ impl StdioTransport {
     pub async fn close(&self) -> Result<()> {
         let mut child = self._child.lock().await;
         let _ = child.kill().await;
-        self.connected.store(false, std::sync::atomic::Ordering::SeqCst);
+        self.connected
+            .store(false, std::sync::atomic::Ordering::SeqCst);
         Ok(())
     }
 
@@ -340,7 +361,9 @@ impl HttpTransport {
 
         let body_json = serde_json::to_string(&req)?;
 
-        let uri: hyper::Uri = self.endpoint.parse()
+        let uri: hyper::Uri = self
+            .endpoint
+            .parse()
             .map_err(|e| Error::Transport(format!("invalid URI: {}", e)))?;
 
         let mut request_builder = Request::builder()
@@ -352,12 +375,14 @@ impl HttpTransport {
         if let Some(ref auth) = self.auth {
             match auth {
                 Auth::Bearer { token } => {
-                    request_builder = request_builder.header("Authorization", format!("Bearer {}", token));
+                    request_builder =
+                        request_builder.header("Authorization", format!("Bearer {}", token));
                 }
                 Auth::Basic { username, password } => {
                     let credentials = format!("{}:{}", username, password);
                     let encoded = hex::encode(credentials.as_bytes());
-                    request_builder = request_builder.header("Authorization", format!("Basic {}", encoded));
+                    request_builder =
+                        request_builder.header("Authorization", format!("Basic {}", encoded));
                 }
             }
         }
@@ -373,7 +398,9 @@ impl HttpTransport {
         let https = hyper_util::client::legacy::connect::HttpConnector::new();
         let client: Client<_, Full<Bytes>> = Client::builder(TokioExecutor::new()).build(https);
 
-        let response = client.request(request).await
+        let response = client
+            .request(request)
+            .await
             .map_err(|e| Error::Transport(format!("HTTP request failed: {}", e)))?;
 
         if let Some(sid) = response.headers().get("Mcp-Session-Id") {
@@ -384,11 +411,15 @@ impl HttpTransport {
 
         let status = response.status();
         if !status.is_success() {
-            self.connected.store(false, std::sync::atomic::Ordering::SeqCst);
+            self.connected
+                .store(false, std::sync::atomic::Ordering::SeqCst);
             return Err(Error::Transport(format!("HTTP error: {}", status)));
         }
 
-        let body_bytes = response.into_body().collect().await
+        let body_bytes = response
+            .into_body()
+            .collect()
+            .await
             .map_err(|e| Error::Transport(format!("failed to read response: {}", e)))?
             .to_bytes();
 
@@ -416,7 +447,9 @@ impl HttpTransport {
         use hyper_util::rt::TokioExecutor;
 
         let body_json = serde_json::to_string(&notif)?;
-        let uri: hyper::Uri = self.endpoint.parse()
+        let uri: hyper::Uri = self
+            .endpoint
+            .parse()
             .map_err(|e| Error::Transport(format!("invalid URI: {}", e)))?;
 
         let mut request_builder = Request::builder()
@@ -427,12 +460,14 @@ impl HttpTransport {
         if let Some(ref auth) = self.auth {
             match auth {
                 Auth::Bearer { token } => {
-                    request_builder = request_builder.header("Authorization", format!("Bearer {}", token));
+                    request_builder =
+                        request_builder.header("Authorization", format!("Bearer {}", token));
                 }
                 Auth::Basic { username, password } => {
                     let credentials = format!("{}:{}", username, password);
                     let encoded = hex::encode(credentials.as_bytes());
-                    request_builder = request_builder.header("Authorization", format!("Basic {}", encoded));
+                    request_builder =
+                        request_builder.header("Authorization", format!("Basic {}", encoded));
                 }
             }
         }
@@ -448,7 +483,9 @@ impl HttpTransport {
         let https = hyper_util::client::legacy::connect::HttpConnector::new();
         let client: Client<_, Full<Bytes>> = Client::builder(TokioExecutor::new()).build(https);
 
-        let response = client.request(request).await
+        let response = client
+            .request(request)
+            .await
             .map_err(|e| Error::Transport(format!("HTTP request failed: {}", e)))?;
 
         let status = response.status();
@@ -460,7 +497,8 @@ impl HttpTransport {
     }
 
     pub async fn close(&self) -> Result<()> {
-        self.connected.store(false, std::sync::atomic::Ordering::SeqCst);
+        self.connected
+            .store(false, std::sync::atomic::Ordering::SeqCst);
         Ok(())
     }
 
@@ -475,10 +513,16 @@ impl HttpTransport {
 
 /// WebSocket transport
 pub struct WebSocketTransport {
-    write: Arc<Mutex<futures::stream::SplitSink<
-        tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
-        tokio_tungstenite::tungstenite::Message
-    >>>,
+    write: Arc<
+        Mutex<
+            futures::stream::SplitSink<
+                tokio_tungstenite::WebSocketStream<
+                    tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+                >,
+                tokio_tungstenite::tungstenite::Message,
+            >,
+        >,
+    >,
     pending: Arc<RwLock<HashMap<String, oneshot::Sender<JsonRpcResponse>>>>,
     connected: Arc<std::sync::atomic::AtomicBool>,
 }
@@ -488,7 +532,8 @@ impl WebSocketTransport {
         use futures::StreamExt;
         use tokio_tungstenite::connect_async;
 
-        let (ws_stream, _) = connect_async(url).await
+        let (ws_stream, _) = connect_async(url)
+            .await
             .map_err(|e| Error::Transport(format!("WebSocket connect failed: {}", e)))?;
 
         let (write, mut read) = ws_stream.split();
@@ -523,7 +568,11 @@ impl WebSocketTransport {
             connected_clone.store(false, std::sync::atomic::Ordering::SeqCst);
         });
 
-        Ok(Self { write: Arc::new(Mutex::new(write)), pending, connected })
+        Ok(Self {
+            write: Arc::new(Mutex::new(write)),
+            pending,
+            connected,
+        })
     }
 
     pub async fn request(&self, req: JsonRpcRequest) -> Result<JsonRpcResponse> {
@@ -537,16 +586,27 @@ impl WebSocketTransport {
         };
 
         let (tx, rx) = oneshot::channel();
-        { self.pending.write().await.insert(id_str.clone(), tx); }
+        {
+            self.pending.write().await.insert(id_str.clone(), tx);
+        }
 
         let json = serde_json::to_string(&req)?;
-        { self.write.lock().await.send(Message::Text(json.into())).await
-            .map_err(|e| Error::Transport(format!("WebSocket send failed: {}", e)))?; }
+        {
+            self.write
+                .lock()
+                .await
+                .send(Message::Text(json.into()))
+                .await
+                .map_err(|e| Error::Transport(format!("WebSocket send failed: {}", e)))?;
+        }
 
         match timeout(Duration::from_secs(30), rx).await {
             Ok(Ok(response)) => Ok(response),
             Ok(Err(_)) => Err(Error::Transport("response channel closed".into())),
-            Err(_) => { self.pending.write().await.remove(&id_str); Err(Error::Transport("request timeout".into())) }
+            Err(_) => {
+                self.pending.write().await.remove(&id_str);
+                Err(Error::Transport("request timeout".into()))
+            }
         }
     }
 
@@ -555,7 +615,11 @@ impl WebSocketTransport {
         use tokio_tungstenite::tungstenite::Message;
 
         let json = serde_json::to_string(&notif)?;
-        self.write.lock().await.send(Message::Text(json.into())).await
+        self.write
+            .lock()
+            .await
+            .send(Message::Text(json.into()))
+            .await
             .map_err(|e| Error::Transport(format!("WebSocket send failed: {}", e)))
     }
 
@@ -563,7 +627,8 @@ impl WebSocketTransport {
         use futures::SinkExt;
         use tokio_tungstenite::tungstenite::Message;
         let _ = self.write.lock().await.send(Message::Close(None)).await;
-        self.connected.store(false, std::sync::atomic::Ordering::SeqCst);
+        self.connected
+            .store(false, std::sync::atomic::Ordering::SeqCst);
         Ok(())
     }
 
@@ -595,7 +660,11 @@ pub struct McpClient {
 
 impl McpClient {
     fn next_id(&self) -> Value {
-        Value::Number(self.request_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst).into())
+        Value::Number(
+            self.request_id
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+                .into(),
+        )
     }
 
     async fn send_request(&self, method: &str, params: Option<Value>) -> Result<JsonRpcResponse> {
@@ -625,7 +694,11 @@ impl McpClient {
         }
     }
 
-    pub async fn connect_stdio(command: &str, args: &[String], env: Option<&HashMap<String, String>>) -> Result<Self> {
+    pub async fn connect_stdio(
+        command: &str,
+        args: &[String],
+        env: Option<&HashMap<String, String>>,
+    ) -> Result<Self> {
         let transport = StdioTransport::spawn(command, args, env).await?;
         let client = Self {
             transport: McpClientTransport::Stdio(transport),
@@ -679,7 +752,10 @@ impl McpClient {
 
         let response = self.send_request("initialize", Some(params)).await?;
         if let Some(error) = response.error {
-            return Err(Error::Protocol(format!("initialize failed: {}", error.message)));
+            return Err(Error::Protocol(format!(
+                "initialize failed: {}",
+                error.message
+            )));
         }
 
         if let Some(result) = response.result {
@@ -687,20 +763,28 @@ impl McpClient {
                 *self.server_info.write().await = serde_json::from_value(server_info.clone()).ok();
             }
             if let Some(caps) = result.get("capabilities") {
-                *self.capabilities.write().await = serde_json::from_value(caps.clone()).unwrap_or_default();
+                *self.capabilities.write().await =
+                    serde_json::from_value(caps.clone()).unwrap_or_default();
             }
         }
 
-        self.send_notification("notifications/initialized", None).await?;
+        self.send_notification("notifications/initialized", None)
+            .await?;
         self.refresh_all().await?;
         Ok(())
     }
 
     pub async fn refresh_all(&self) -> Result<()> {
         let caps = self.capabilities.read().await.clone();
-        if caps.tools.is_some() { let _ = self.refresh_tools().await; }
-        if caps.resources.is_some() { let _ = self.refresh_resources().await; }
-        if caps.prompts.is_some() { let _ = self.refresh_prompts().await; }
+        if caps.tools.is_some() {
+            let _ = self.refresh_tools().await;
+        }
+        if caps.resources.is_some() {
+            let _ = self.refresh_resources().await;
+        }
+        if caps.prompts.is_some() {
+            let _ = self.refresh_prompts().await;
+        }
         Ok(())
     }
 
@@ -708,7 +792,8 @@ impl McpClient {
         let response = self.send_request("tools/list", None).await?;
         if let Some(result) = response.result {
             if let Some(tools_val) = result.get("tools") {
-                *self.tools.write().await = serde_json::from_value(tools_val.clone()).unwrap_or_default();
+                *self.tools.write().await =
+                    serde_json::from_value(tools_val.clone()).unwrap_or_default();
             }
         }
         Ok(())
@@ -718,7 +803,8 @@ impl McpClient {
         let response = self.send_request("resources/list", None).await?;
         if let Some(result) = response.result {
             if let Some(resources_val) = result.get("resources") {
-                *self.resources.write().await = serde_json::from_value(resources_val.clone()).unwrap_or_default();
+                *self.resources.write().await =
+                    serde_json::from_value(resources_val.clone()).unwrap_or_default();
             }
         }
         Ok(())
@@ -728,7 +814,8 @@ impl McpClient {
         let response = self.send_request("prompts/list", None).await?;
         if let Some(result) = response.result {
             if let Some(prompts_val) = result.get("prompts") {
-                *self.prompts.write().await = serde_json::from_value(prompts_val.clone()).unwrap_or_default();
+                *self.prompts.write().await =
+                    serde_json::from_value(prompts_val.clone()).unwrap_or_default();
             }
         }
         Ok(())
@@ -738,33 +825,56 @@ impl McpClient {
         let params = json!({ "name": name, "arguments": arguments });
         let response = self.send_request("tools/call", Some(params)).await?;
         if let Some(error) = response.error {
-            return Err(Error::ToolCallFailed(format!("{}: {}", name, error.message)));
+            return Err(Error::ToolCallFailed(format!(
+                "{}: {}",
+                name, error.message
+            )));
         }
-        response.result.ok_or_else(|| Error::Protocol("empty tool result".into()))
+        response
+            .result
+            .ok_or_else(|| Error::Protocol("empty tool result".into()))
     }
 
     pub async fn read_resource(&self, uri: &str) -> Result<Value> {
         let params = json!({ "uri": uri });
         let response = self.send_request("resources/read", Some(params)).await?;
         if let Some(error) = response.error {
-            return Err(Error::ResourceNotFound(format!("{}: {}", uri, error.message)));
+            return Err(Error::ResourceNotFound(format!(
+                "{}: {}",
+                uri, error.message
+            )));
         }
-        response.result.ok_or_else(|| Error::Protocol("empty resource result".into()))
+        response
+            .result
+            .ok_or_else(|| Error::Protocol("empty resource result".into()))
     }
 
     pub async fn get_prompt(&self, name: &str, arguments: Option<Value>) -> Result<Value> {
         let params = json!({ "name": name, "arguments": arguments.unwrap_or(json!({})) });
         let response = self.send_request("prompts/get", Some(params)).await?;
         if let Some(error) = response.error {
-            return Err(Error::Protocol(format!("prompt {} failed: {}", name, error.message)));
+            return Err(Error::Protocol(format!(
+                "prompt {} failed: {}",
+                name, error.message
+            )));
         }
-        response.result.ok_or_else(|| Error::Protocol("empty prompt result".into()))
+        response
+            .result
+            .ok_or_else(|| Error::Protocol("empty prompt result".into()))
     }
 
-    pub async fn tools(&self) -> Vec<McpTool> { self.tools.read().await.clone() }
-    pub async fn resources(&self) -> Vec<McpResource> { self.resources.read().await.clone() }
-    pub async fn prompts(&self) -> Vec<McpPrompt> { self.prompts.read().await.clone() }
-    pub async fn server_info(&self) -> Option<McpServerInfo> { self.server_info.read().await.clone() }
+    pub async fn tools(&self) -> Vec<McpTool> {
+        self.tools.read().await.clone()
+    }
+    pub async fn resources(&self) -> Vec<McpResource> {
+        self.resources.read().await.clone()
+    }
+    pub async fn prompts(&self) -> Vec<McpPrompt> {
+        self.prompts.read().await.clone()
+    }
+    pub async fn server_info(&self) -> Option<McpServerInfo> {
+        self.server_info.read().await.clone()
+    }
 
     pub fn is_connected(&self) -> bool {
         match &self.transport {
@@ -801,8 +911,16 @@ struct ConnectedServer {
 
 impl ConnectedServer {
     fn new(id: String, name: String, config: ServerConfig) -> Self {
-        Self { id, name, config, client: None, status: ServerStatus::Disconnected,
-               last_error: None, last_health_check: None, reconnect_attempts: 0 }
+        Self {
+            id,
+            name,
+            config,
+            client: None,
+            status: ServerStatus::Disconnected,
+            last_error: None,
+            last_health_check: None,
+            reconnect_attempts: 0,
+        }
     }
 }
 
@@ -847,7 +965,13 @@ impl Gateway {
 
     fn generate_id() -> String {
         use std::time::{SystemTime, UNIX_EPOCH};
-        format!("{:x}", SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos())
+        format!(
+            "{:x}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        )
     }
 
     pub async fn add_server(&self, name: &str, config: ServerConfig) -> Result<String> {
@@ -862,7 +986,15 @@ impl Gateway {
         let server_id = id.clone();
 
         tokio::spawn(async move {
-            if let Err(e) = Self::connect_server(&servers, &tool_routing, &resource_routing, &prompt_routing, &server_id).await {
+            if let Err(e) = Self::connect_server(
+                &servers,
+                &tool_routing,
+                &resource_routing,
+                &prompt_routing,
+                &server_id,
+            )
+            .await
+            {
                 tracing::error!("Failed to connect to server {}: {}", server_id, e);
             }
         });
@@ -879,48 +1011,78 @@ impl Gateway {
     ) -> Result<()> {
         let config = {
             let mut servers = servers.write().await;
-            let server = servers.get_mut(server_id).ok_or_else(|| Error::Server(format!("server {} not found", server_id)))?;
+            let server = servers
+                .get_mut(server_id)
+                .ok_or_else(|| Error::Server(format!("server {} not found", server_id)))?;
             server.status = ServerStatus::Connecting;
             server.config.clone()
         };
 
         let client_result = match config.transport {
             Transport::Stdio => {
-                let url = url::Url::parse(&config.url).map_err(|e| Error::Config(format!("invalid URL: {}", e)))?;
+                let url = url::Url::parse(&config.url)
+                    .map_err(|e| Error::Config(format!("invalid URL: {}", e)))?;
                 let command = url.path();
-                let args: Vec<String> = url.query_pairs().filter(|(k, _)| k == "arg").map(|(_, v)| v.to_string()).collect();
+                let args: Vec<String> = url
+                    .query_pairs()
+                    .filter(|(k, _)| k == "arg")
+                    .map(|(_, v)| v.to_string())
+                    .collect();
                 McpClient::connect_stdio(command, &args, None).await
             }
             Transport::Http => McpClient::connect_http(&config.url, config.auth.clone()).await,
             Transport::WebSocket => McpClient::connect_websocket(&config.url).await,
-            Transport::Zap => return Err(Error::Transport("ZAP transport not yet implemented".into())),
-            Transport::Unix => return Err(Error::Transport("Unix transport not yet implemented".into())),
+            Transport::Zap => {
+                return Err(Error::Transport("ZAP transport not yet implemented".into()))
+            }
+            Transport::Unix => {
+                return Err(Error::Transport(
+                    "Unix transport not yet implemented".into(),
+                ))
+            }
         };
 
         match client_result {
             Ok(client) => {
                 let client = Arc::new(client);
 
-                { let tools = client.tools().await; let mut routing = tool_routing.write().await;
-                  for tool in &tools { routing.insert(tool.name.clone(), server_id.to_string()); } }
+                {
+                    let tools = client.tools().await;
+                    let mut routing = tool_routing.write().await;
+                    for tool in &tools {
+                        routing.insert(tool.name.clone(), server_id.to_string());
+                    }
+                }
 
-                { let resources = client.resources().await; let mut routing = resource_routing.write().await;
-                  for resource in &resources {
-                      if let Some(scheme) = resource.uri.split(':').next() { routing.insert(format!("{}:", scheme), server_id.to_string()); }
-                      routing.insert(resource.uri.clone(), server_id.to_string());
-                  } }
+                {
+                    let resources = client.resources().await;
+                    let mut routing = resource_routing.write().await;
+                    for resource in &resources {
+                        if let Some(scheme) = resource.uri.split(':').next() {
+                            routing.insert(format!("{}:", scheme), server_id.to_string());
+                        }
+                        routing.insert(resource.uri.clone(), server_id.to_string());
+                    }
+                }
 
-                { let prompts = client.prompts().await; let mut routing = prompt_routing.write().await;
-                  for prompt in &prompts { routing.insert(prompt.name.clone(), server_id.to_string()); } }
+                {
+                    let prompts = client.prompts().await;
+                    let mut routing = prompt_routing.write().await;
+                    for prompt in &prompts {
+                        routing.insert(prompt.name.clone(), server_id.to_string());
+                    }
+                }
 
-                { let mut servers = servers.write().await;
-                  if let Some(server) = servers.get_mut(server_id) {
-                      server.client = Some(client);
-                      server.status = ServerStatus::Connected;
-                      server.last_error = None;
-                      server.reconnect_attempts = 0;
-                      server.last_health_check = Some(Instant::now());
-                  } }
+                {
+                    let mut servers = servers.write().await;
+                    if let Some(server) = servers.get_mut(server_id) {
+                        server.client = Some(client);
+                        server.status = ServerStatus::Connected;
+                        server.last_error = None;
+                        server.reconnect_attempts = 0;
+                        server.last_health_check = Some(Instant::now());
+                    }
+                }
 
                 tracing::info!("Connected to MCP server: {}", server_id);
                 Ok(())
@@ -943,7 +1105,9 @@ impl Gateway {
             self.tool_routing.write().await.retain(|_, v| v != id);
             self.resource_routing.write().await.retain(|_, v| v != id);
             self.prompt_routing.write().await.retain(|_, v| v != id);
-            if let Some(client) = &server.client { let _ = client.close().await; }
+            if let Some(client) = &server.client {
+                let _ = client.close().await;
+            }
         }
         Ok(())
     }
@@ -952,12 +1116,25 @@ impl Gateway {
         let servers = self.servers.read().await;
         let mut result = Vec::new();
         for server in servers.values() {
-            let (tools_count, resources_count, prompts_count) = if let Some(client) = &server.client {
-                (client.tools().await.len(), client.resources().await.len(), client.prompts().await.len())
-            } else { (0, 0, 0) };
+            let (tools_count, resources_count, prompts_count) = if let Some(client) = &server.client
+            {
+                (
+                    client.tools().await.len(),
+                    client.resources().await.len(),
+                    client.prompts().await.len(),
+                )
+            } else {
+                (0, 0, 0)
+            };
             result.push(ServerInfo {
-                id: server.id.clone(), name: server.name.clone(), url: server.config.url.clone(),
-                status: server.status, tools_count, resources_count, prompts_count, last_error: server.last_error.clone(),
+                id: server.id.clone(),
+                name: server.name.clone(),
+                url: server.config.url.clone(),
+                status: server.status,
+                tools_count,
+                resources_count,
+                prompts_count,
+                last_error: server.last_error.clone(),
             });
         }
         result
@@ -972,7 +1149,9 @@ impl Gateway {
         let mut tools = Vec::new();
         for server in servers.values() {
             if let Some(client) = &server.client {
-                if server.status == ServerStatus::Connected { tools.extend(client.tools().await); }
+                if server.status == ServerStatus::Connected {
+                    tools.extend(client.tools().await);
+                }
             }
         }
         tools
@@ -983,7 +1162,9 @@ impl Gateway {
         let mut resources = Vec::new();
         for server in servers.values() {
             if let Some(client) = &server.client {
-                if server.status == ServerStatus::Connected { resources.extend(client.resources().await); }
+                if server.status == ServerStatus::Connected {
+                    resources.extend(client.resources().await);
+                }
             }
         }
         resources
@@ -994,16 +1175,28 @@ impl Gateway {
         let mut prompts = Vec::new();
         for server in servers.values() {
             if let Some(client) = &server.client {
-                if server.status == ServerStatus::Connected { prompts.extend(client.prompts().await); }
+                if server.status == ServerStatus::Connected {
+                    prompts.extend(client.prompts().await);
+                }
             }
         }
         prompts
     }
 
     pub async fn call_tool(&self, name: &str, arguments: Value) -> Result<Value> {
-        let server_id = self.tool_routing.read().await.get(name).cloned()
+        let server_id = self
+            .tool_routing
+            .read()
+            .await
+            .get(name)
+            .cloned()
             .ok_or_else(|| Error::ToolNotFound(name.to_string()))?;
-        let client = self.servers.read().await.get(&server_id).and_then(|s| s.client.clone())
+        let client = self
+            .servers
+            .read()
+            .await
+            .get(&server_id)
+            .and_then(|s| s.client.clone())
             .ok_or_else(|| Error::Server(format!("server {} not connected", server_id)))?;
         client.call_tool(name, arguments).await
     }
@@ -1011,17 +1204,38 @@ impl Gateway {
     pub async fn read_resource(&self, uri: &str) -> Result<Value> {
         let server_id = {
             let routing = self.resource_routing.read().await;
-            routing.get(uri).cloned().or_else(|| routing.iter().find(|(prefix, _)| uri.starts_with(prefix.as_str())).map(|(_, id)| id.clone()))
-        }.ok_or_else(|| Error::ResourceNotFound(uri.to_string()))?;
-        let client = self.servers.read().await.get(&server_id).and_then(|s| s.client.clone())
+            routing.get(uri).cloned().or_else(|| {
+                routing
+                    .iter()
+                    .find(|(prefix, _)| uri.starts_with(prefix.as_str()))
+                    .map(|(_, id)| id.clone())
+            })
+        }
+        .ok_or_else(|| Error::ResourceNotFound(uri.to_string()))?;
+        let client = self
+            .servers
+            .read()
+            .await
+            .get(&server_id)
+            .and_then(|s| s.client.clone())
             .ok_or_else(|| Error::Server(format!("server {} not connected", server_id)))?;
         client.read_resource(uri).await
     }
 
     pub async fn get_prompt(&self, name: &str, arguments: Option<Value>) -> Result<Value> {
-        let server_id = self.prompt_routing.read().await.get(name).cloned()
+        let server_id = self
+            .prompt_routing
+            .read()
+            .await
+            .get(name)
+            .cloned()
             .ok_or_else(|| Error::Protocol(format!("prompt {} not found", name)))?;
-        let client = self.servers.read().await.get(&server_id).and_then(|s| s.client.clone())
+        let client = self
+            .servers
+            .read()
+            .await
+            .get(&server_id)
+            .and_then(|s| s.client.clone())
             .ok_or_else(|| Error::Server(format!("server {} not connected", server_id)))?;
         client.get_prompt(name, arguments).await
     }
@@ -1057,17 +1271,36 @@ impl Gateway {
                         if let Some(server) = servers.get(&server_id) {
                             let needs_reconnect = match server.status {
                                 ServerStatus::Error | ServerStatus::Disconnected => true,
-                                ServerStatus::Connected => server.client.as_ref().map(|c| !c.is_connected()).unwrap_or(true),
+                                ServerStatus::Connected => server
+                                    .client
+                                    .as_ref()
+                                    .map(|c| !c.is_connected())
+                                    .unwrap_or(true),
                                 _ => false,
                             };
                             (needs_reconnect, server.client.clone())
-                        } else { (false, None) }
+                        } else {
+                            (false, None)
+                        }
                     };
 
                     if needs_reconnect {
                         tracing::info!("Health check: reconnecting {}", server_id);
-                        { servers.write().await.get_mut(&server_id).map(|s| s.status = ServerStatus::Reconnecting); }
-                        let _ = Self::connect_server(&servers, &tool_routing, &resource_routing, &prompt_routing, &server_id).await;
+                        {
+                            servers
+                                .write()
+                                .await
+                                .get_mut(&server_id)
+                                .map(|s| s.status = ServerStatus::Reconnecting);
+                        }
+                        let _ = Self::connect_server(
+                            &servers,
+                            &tool_routing,
+                            &resource_routing,
+                            &prompt_routing,
+                            &server_id,
+                        )
+                        .await;
                     } else if let Some(client) = client {
                         let _ = client.refresh_all().await;
                     }
@@ -1081,13 +1314,24 @@ impl Gateway {
         }
 
         health_task.abort();
-        for id in self.servers.read().await.keys().cloned().collect::<Vec<_>>() { let _ = self.remove_server(&id).await; }
+        for id in self
+            .servers
+            .read()
+            .await
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>()
+        {
+            let _ = self.remove_server(&id).await;
+        }
         tracing::info!("Gateway shutdown complete");
         Ok(())
     }
 
     pub async fn shutdown(&self) -> Result<()> {
-        if let Some(tx) = &self.shutdown_tx { let _ = tx.send(()).await; }
+        if let Some(tx) = &self.shutdown_tx {
+            let _ = tx.send(()).await;
+        }
         Ok(())
     }
 }
@@ -1102,7 +1346,12 @@ mod tests {
 
     #[test]
     fn test_json_rpc_request_serialize() {
-        let req = JsonRpcRequest { jsonrpc: "2.0".to_string(), id: json!(1), method: "tools/list".to_string(), params: None };
+        let req = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(1),
+            method: "tools/list".to_string(),
+            params: None,
+        };
         let json = serde_json::to_string(&req).unwrap();
         assert!(json.contains("\"jsonrpc\":\"2.0\""));
         assert!(json.contains("\"method\":\"tools/list\""));
@@ -1134,8 +1383,13 @@ mod tests {
     async fn test_gateway_add_remove_server() {
         let config = Config::default();
         let gateway = Gateway::new(config);
-        let server_config = ServerConfig { name: "test".to_string(), url: "http://localhost:8080".to_string(),
-                                           transport: Transport::Http, timeout: 30000, auth: None };
+        let server_config = ServerConfig {
+            name: "test".to_string(),
+            url: "http://localhost:8080".to_string(),
+            transport: Transport::Http,
+            timeout: 30000,
+            auth: None,
+        };
         let id = gateway.add_server("test", server_config).await.unwrap();
         assert!(!id.is_empty());
         tokio::time::sleep(Duration::from_millis(10)).await;

@@ -1,8 +1,8 @@
 //! ZAP daemon (gateway)
 
 use clap::Parser;
-use zap::{Config, Gateway, Result};
 use std::path::PathBuf;
+use zap::{Config, Gateway, Result};
 
 #[derive(Parser)]
 #[command(name = "zapd")]

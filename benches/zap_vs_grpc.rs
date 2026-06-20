@@ -45,7 +45,9 @@ mod zap_bench {
 
         // Simulate building addressbook entries
         for i in 0..count {
-            message.set_root::<capnp::any_pointer::Builder>(capnp::any_pointer::Builder::new_default().into());
+            message.set_root::<capnp::any_pointer::Builder>(
+                capnp::any_pointer::Builder::new_default().into(),
+            );
         }
 
         serialize::write_message(&mut data, &message).unwrap();
@@ -98,19 +100,19 @@ mod grpc_bench {
 
     /// Create protobuf message
     pub fn create_message(count: usize) -> Vec<u8> {
-        let mut book = AddressBook { people: Vec::with_capacity(count) };
+        let mut book = AddressBook {
+            people: Vec::with_capacity(count),
+        };
 
         for i in 0..count {
             book.people.push(Person {
                 name: format!("Person {}", i),
                 email: format!("person{}@example.com", i),
                 id: i as i32,
-                phones: vec![
-                    PhoneNumber {
-                        number: format!("555-{:04}", i),
-                        phone_type: PhoneType::Mobile as i32,
-                    },
-                ],
+                phones: vec![PhoneNumber {
+                    number: format!("555-{:04}", i),
+                    phone_type: PhoneType::Mobile as i32,
+                }],
             });
         }
 
@@ -136,27 +138,15 @@ fn bench_serialization(c: &mut Criterion) {
         group.throughput(Throughput::Elements(*size as u64));
 
         // ZAP (Cap'n Proto) - Always run
-        group.bench_with_input(
-            BenchmarkId::new("zap", size),
-            size,
-            |b, &size| {
-                b.iter(|| {
-                    black_box(zap_bench::build_addressbook(size))
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("zap", size), size, |b, &size| {
+            b.iter(|| black_box(zap_bench::build_addressbook(size)));
+        });
 
         // gRPC (Protobuf) - Only with feature
         #[cfg(feature = "grpc")]
-        group.bench_with_input(
-            BenchmarkId::new("grpc", size),
-            size,
-            |b, &size| {
-                b.iter(|| {
-                    black_box(grpc_bench::create_message(size))
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("grpc", size), size, |b, &size| {
+            b.iter(|| black_box(grpc_bench::create_message(size)));
+        });
     }
 
     group.finish();
@@ -180,9 +170,7 @@ fn bench_deserialization(c: &mut Criterion) {
             BenchmarkId::new("zap_zerocopy", size),
             &zap_data,
             |b, data| {
-                b.iter(|| {
-                    black_box(zap_bench::read_message(data))
-                });
+                b.iter(|| black_box(zap_bench::read_message(data)));
             },
         );
 
@@ -192,9 +180,7 @@ fn bench_deserialization(c: &mut Criterion) {
             BenchmarkId::new("grpc_decode", size),
             &grpc_data,
             |b, data| {
-                b.iter(|| {
-                    black_box(grpc_bench::read_message(data))
-                });
+                b.iter(|| black_box(grpc_bench::read_message(data)));
             },
         );
     }

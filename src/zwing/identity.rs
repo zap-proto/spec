@@ -7,8 +7,8 @@
 use ed25519_dalek::{Signer, Verifier};
 use pqcrypto_mldsa::mldsa65::{
     detached_sign_ctx as ml_sign_ctx, keypair as ml_keypair,
-    verify_detached_signature_ctx as ml_verify_ctx, DetachedSignature as MlSig,
-    PublicKey as MlPub, SecretKey as MlSec,
+    verify_detached_signature_ctx as ml_verify_ctx, DetachedSignature as MlSig, PublicKey as MlPub,
+    SecretKey as MlSec,
 };
 use pqcrypto_traits::sign::{
     DetachedSignature as KemDetachedSig, PublicKey as KemSignPub, SecretKey as KemSignSec,
@@ -128,10 +128,8 @@ impl IdentityPublic {
             return Err(Error::InvalidWireFormat);
         }
         let mut off = 0;
-        let ed_arr: [u8; ED25519_PUBLIC_KEY_SIZE] = data
-            [off..off + ED25519_PUBLIC_KEY_SIZE]
-            .try_into()
-            .unwrap();
+        let ed_arr: [u8; ED25519_PUBLIC_KEY_SIZE] =
+            data[off..off + ED25519_PUBLIC_KEY_SIZE].try_into().unwrap();
         let ed_pk = ed25519_dalek::VerifyingKey::from_bytes(&ed_arr)
             .map_err(|e| Error::Crypto(format!("ed25519 pubkey: {e}")))?;
         off += ED25519_PUBLIC_KEY_SIZE;

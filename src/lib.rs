@@ -29,28 +29,37 @@ pub mod zap_capnp {
     include!(concat!(env!("OUT_DIR"), "/zap_capnp.rs"));
 }
 
-pub mod client;
-pub mod server;
-pub mod gateway;
-pub mod transport;
-pub mod error;
-pub mod config;
-pub mod crypto;
-pub mod consensus;
-pub mod identity;
 pub mod agent_consensus;
+pub mod client;
+pub mod config;
+pub mod consensus;
+pub mod crypto;
+pub mod error;
+pub mod gateway;
+pub mod identity;
 pub mod schema;
+pub mod server;
+pub mod transport;
 pub mod zwing;
 
+pub use agent_consensus::{
+    AgentConsensusVoting, ConsensusResult, Query, QueryId, Response, ResponseId,
+};
 pub use client::Client;
-pub use server::Server;
-pub use gateway::Gateway;
-pub use error::{Error, Result};
 pub use config::Config;
-pub use consensus::{RingtailConsensus, AgentConsensus, RingtailSignature, Round1Output, Round2Output};
-pub use identity::{Did, DidMethod, DidDocument, VerificationMethod, Service, NodeIdentity, StakeRegistry};
-pub use agent_consensus::{AgentConsensusVoting, Query, Response, ConsensusResult, QueryId, ResponseId};
-pub use schema::{ZapSchema, SchemaFormat, transpile, transpile_str, compile_to_rust, capnp_to_zap, migrate_capnp_to_zap};
+pub use consensus::{
+    AgentConsensus, RingtailConsensus, RingtailSignature, Round1Output, Round2Output,
+};
+pub use error::{Error, Result};
+pub use gateway::Gateway;
+pub use identity::{
+    Did, DidDocument, DidMethod, NodeIdentity, Service, StakeRegistry, VerificationMethod,
+};
+pub use schema::{
+    capnp_to_zap, compile_to_rust, migrate_capnp_to_zap, transpile, transpile_str, SchemaFormat,
+    ZapSchema,
+};
+pub use server::Server;
 
 /// ZAP protocol version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

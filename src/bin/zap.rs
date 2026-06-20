@@ -13,7 +13,12 @@ struct Cli {
     config: Option<std::path::PathBuf>,
 
     /// Gateway URL
-    #[arg(short = 'u', long, global = true, default_value = "zap://localhost:9999")]
+    #[arg(
+        short = 'u',
+        long,
+        global = true,
+        default_value = "zap://localhost:9999"
+    )]
     url: String,
 
     #[command(subcommand)]

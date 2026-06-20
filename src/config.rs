@@ -96,15 +96,15 @@ impl Config {
     /// Load config from file
     pub fn load(path: &PathBuf) -> crate::Result<Self> {
         let content = std::fs::read_to_string(path)?;
-        let config: Config = toml::from_str(&content)
-            .map_err(|e| crate::Error::Config(e.to_string()))?;
+        let config: Config =
+            toml::from_str(&content).map_err(|e| crate::Error::Config(e.to_string()))?;
         Ok(config)
     }
 
     /// Save config to file
     pub fn save(&self, path: &PathBuf) -> crate::Result<()> {
-        let content = toml::to_string_pretty(self)
-            .map_err(|e| crate::Error::Config(e.to_string()))?;
+        let content =
+            toml::to_string_pretty(self).map_err(|e| crate::Error::Config(e.to_string()))?;
         std::fs::write(path, content)?;
         Ok(())
     }

@@ -132,8 +132,17 @@ fn main() {
 
     let result = match cli.command {
         Commands::Compile { input, out, force } => cmd_compile(input, out, force),
-        Commands::Generate { input, lang, out, force } => cmd_generate(input, lang, out, force),
-        Commands::Migrate { input, output, force } => cmd_migrate(input, output, force),
+        Commands::Generate {
+            input,
+            lang,
+            out,
+            force,
+        } => cmd_generate(input, lang, out, force),
+        Commands::Migrate {
+            input,
+            output,
+            force,
+        } => cmd_migrate(input, output, force),
         Commands::Check { input, verbose } => cmd_check(input, verbose),
         Commands::Fmt { input, write } => cmd_fmt(input, write),
         Commands::Version => cmd_version(),
@@ -149,17 +158,21 @@ fn cmd_compile(input: PathBuf, out: Option<PathBuf>, force: bool) -> Result<(), 
     let source = fs::read_to_string(&input)
         .map_err(|e| format!("Failed to read {}: {}", input.display(), e))?;
 
-    let filename = input.file_name()
+    let filename = input
+        .file_name()
         .and_then(|s| s.to_str())
         .unwrap_or("schema.zap");
 
-    let result = transpile_str(&source, filename)
-        .map_err(|e| format!("Compilation failed: {}", e))?;
+    let result =
+        transpile_str(&source, filename).map_err(|e| format!("Compilation failed: {}", e))?;
 
     match out {
         Some(path) => {
             if path.exists() && !force {
-                return Err(format!("Output file {} already exists. Use --force to overwrite.", path.display()));
+                return Err(format!(
+                    "Output file {} already exists. Use --force to overwrite.",
+                    path.display()
+                ));
             }
             fs::write(&path, &result)
                 .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
@@ -177,15 +190,14 @@ fn cmd_generate(input: PathBuf, lang: String, out: PathBuf, force: bool) -> Resu
     let source = fs::read_to_string(&input)
         .map_err(|e| format!("Failed to read {}: {}", input.display(), e))?;
 
-    let filename = input.file_name()
+    let filename = input
+        .file_name()
         .and_then(|s| s.to_str())
         .unwrap_or("schema.zap");
 
     let code = match lang.to_lowercase().as_str() {
-        "rust" | "rs" => {
-            compile_to_rust(&source, filename)
-                .map_err(|e| format!("Rust code generation failed: {}", e))?
-        }
+        "rust" | "rs" => compile_to_rust(&source, filename)
+            .map_err(|e| format!("Rust code generation failed: {}", e))?,
         "go" => {
             // TODO: Implement Go code generation
             return Err("Go code generation not yet implemented".to_string());
@@ -215,7 +227,10 @@ fn cmd_generate(input: PathBuf, lang: String, out: PathBuf, force: bool) -> Resu
             return Err("Elixir code generation not yet implemented".to_string());
         }
         _ => {
-            return Err(format!("Unknown language: {}. Supported: rust, go, ts, python, c, cpp, haskell, elixir", lang));
+            return Err(format!(
+                "Unknown language: {}. Supported: rust, go, ts, python, c, cpp, haskell, elixir",
+                lang
+            ));
         }
     };
 
@@ -224,7 +239,8 @@ fn cmd_generate(input: PathBuf, lang: String, out: PathBuf, force: bool) -> Resu
         .map_err(|e| format!("Failed to create output directory {}: {}", out.display(), e))?;
 
     // Determine output filename
-    let stem = input.file_stem()
+    let stem = input
+        .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("schema");
 
@@ -243,24 +259,34 @@ fn cmd_generate(input: PathBuf, lang: String, out: PathBuf, force: bool) -> Resu
     let output_path = out.join(format!("{}.{}", stem, ext));
 
     if output_path.exists() && !force {
-        return Err(format!("Output file {} already exists. Use --force to overwrite.", output_path.display()));
+        return Err(format!(
+            "Output file {} already exists. Use --force to overwrite.",
+            output_path.display()
+        ));
     }
 
     fs::write(&output_path, &code)
         .map_err(|e| format!("Failed to write {}: {}", output_path.display(), e))?;
 
-    println!("Generated {} ({}) -> {}", input.display(), lang, output_path.display());
+    println!(
+        "Generated {} ({}) -> {}",
+        input.display(),
+        lang,
+        output_path.display()
+    );
 
     Ok(())
 }
 
 fn cmd_migrate(input: PathBuf, output: PathBuf, force: bool) -> Result<(), String> {
     if output.exists() && !force {
-        return Err(format!("Output file {} already exists. Use --force to overwrite.", output.display()));
+        return Err(format!(
+            "Output file {} already exists. Use --force to overwrite.",
+            output.display()
+        ));
     }
 
-    migrate_capnp_to_zap(&input, &output)
-        .map_err(|e| format!("Migration failed: {}", e))?;
+    migrate_capnp_to_zap(&input, &output).map_err(|e| format!("Migration failed: {}", e))?;
 
     println!("Migrated {} -> {}", input.display(), output.display());
 
@@ -271,7 +297,8 @@ fn cmd_check(input: PathBuf, verbose: bool) -> Result<(), String> {
     let source = fs::read_to_string(&input)
         .map_err(|e| format!("Failed to read {}: {}", input.display(), e))?;
 
-    let filename = input.file_name()
+    let filename = input
+        .file_name()
         .and_then(|s| s.to_str())
         .unwrap_or("schema.zap");
 
@@ -300,9 +327,7 @@ fn cmd_check(input: PathBuf, verbose: bool) -> Result<(), String> {
             println!("✓ {} is valid", input.display());
             Ok(())
         }
-        Err(e) => {
-            Err(format!("✗ {} has errors: {}", input.display(), e))
-        }
+        Err(e) => Err(format!("✗ {} has errors: {}", input.display(), e)),
     }
 }
 
@@ -324,7 +349,10 @@ fn cmd_fmt(input: PathBuf, write: bool) -> Result<(), String> {
         }
 
         // Check if this line decreases indentation
-        if trimmed.starts_with("struct ") || trimmed.starts_with("enum ") || trimmed.starts_with("interface ") {
+        if trimmed.starts_with("struct ")
+            || trimmed.starts_with("enum ")
+            || trimmed.starts_with("interface ")
+        {
             // Top-level definitions get no indent
             if in_block == 0 {
                 formatted.push_str(trimmed);
@@ -341,7 +369,11 @@ fn cmd_fmt(input: PathBuf, write: bool) -> Result<(), String> {
         formatted.push('\n');
 
         // Adjust block level based on content
-        if trimmed.starts_with("struct ") || trimmed.starts_with("enum ") || trimmed.starts_with("interface ") || trimmed.starts_with("union") {
+        if trimmed.starts_with("struct ")
+            || trimmed.starts_with("enum ")
+            || trimmed.starts_with("interface ")
+            || trimmed.starts_with("union")
+        {
             in_block += 1;
         }
     }

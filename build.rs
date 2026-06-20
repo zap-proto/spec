@@ -31,10 +31,7 @@ fn main() {
             .build_server(true)
             .build_client(true)
             .out_dir("src/generated")
-            .compile_protos(
-                &["proto/zap.proto", "proto/benchmark.proto"],
-                &["proto/"],
-            )
+            .compile_protos(&["proto/zap.proto", "proto/benchmark.proto"], &["proto/"])
             .unwrap_or_else(|e| {
                 eprintln!("Warning: protobuf compilation skipped: {}", e);
             });

@@ -83,7 +83,10 @@ mod pq_impl {
     impl PQKeyExchange {
         pub fn generate() -> Result<Self> {
             let (pk, sk) = mlkem768::keypair();
-            Ok(Self { public_key: pk, secret_key: sk })
+            Ok(Self {
+                public_key: pk,
+                secret_key: sk,
+            })
         }
 
         pub fn public_key_bytes(&self) -> Vec<u8> {
@@ -94,13 +97,17 @@ mod pq_impl {
             if bytes.len() != MLKEM_PUBLIC_KEY_SIZE {
                 return Err(Error::Crypto(format!(
                     "invalid ML-KEM public key size: expected {}, got {}",
-                    MLKEM_PUBLIC_KEY_SIZE, bytes.len()
+                    MLKEM_PUBLIC_KEY_SIZE,
+                    bytes.len()
                 )));
             }
             let pk = mlkem768::PublicKey::from_bytes(bytes)
                 .map_err(|e| Error::Crypto(format!("invalid ML-KEM public key: {e:?}")))?;
             let (_, dummy_sk) = mlkem768::keypair();
-            Ok(Self { public_key: pk, secret_key: dummy_sk })
+            Ok(Self {
+                public_key: pk,
+                secret_key: dummy_sk,
+            })
         }
 
         pub fn encapsulate(&self, recipient_pk: &[u8]) -> Result<(Vec<u8>, [u8; 32])> {
@@ -116,7 +123,8 @@ mod pq_impl {
             if ciphertext.len() != MLKEM_CIPHERTEXT_SIZE {
                 return Err(Error::Crypto(format!(
                     "invalid ML-KEM ciphertext size: expected {}, got {}",
-                    MLKEM_CIPHERTEXT_SIZE, ciphertext.len()
+                    MLKEM_CIPHERTEXT_SIZE,
+                    ciphertext.len()
                 )));
             }
             let ct = mlkem768::Ciphertext::from_bytes(ciphertext)
@@ -137,7 +145,10 @@ mod pq_impl {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("PQSignature")
                 .field("public_key", &"<public_key>")
-                .field("secret_key", &self.secret_key.as_ref().map(|_| "<secret_key>"))
+                .field(
+                    "secret_key",
+                    &self.secret_key.as_ref().map(|_| "<secret_key>"),
+                )
                 .finish()
         }
     }
@@ -150,14 +161,20 @@ mod pq_impl {
                 let sk_bytes = sk.as_bytes().to_vec();
                 dilithium3::SecretKey::from_bytes(&sk_bytes).unwrap()
             });
-            Self { public_key, secret_key }
+            Self {
+                public_key,
+                secret_key,
+            }
         }
     }
 
     impl PQSignature {
         pub fn generate() -> Result<Self> {
             let (pk, sk) = dilithium3::keypair();
-            Ok(Self { public_key: pk, secret_key: Some(sk) })
+            Ok(Self {
+                public_key: pk,
+                secret_key: Some(sk),
+            })
         }
 
         pub fn public_key_bytes(&self) -> Vec<u8> {
@@ -168,16 +185,22 @@ mod pq_impl {
             if bytes.len() != MLDSA_PUBLIC_KEY_SIZE {
                 return Err(Error::Crypto(format!(
                     "invalid ML-DSA public key size: expected {}, got {}",
-                    MLDSA_PUBLIC_KEY_SIZE, bytes.len()
+                    MLDSA_PUBLIC_KEY_SIZE,
+                    bytes.len()
                 )));
             }
             let pk = dilithium3::PublicKey::from_bytes(bytes)
                 .map_err(|e| Error::Crypto(format!("invalid ML-DSA public key: {e:?}")))?;
-            Ok(Self { public_key: pk, secret_key: None })
+            Ok(Self {
+                public_key: pk,
+                secret_key: None,
+            })
         }
 
         pub fn sign(&self, message: &[u8]) -> Result<Vec<u8>> {
-            let sk = self.secret_key.as_ref()
+            let sk = self
+                .secret_key
+                .as_ref()
                 .ok_or_else(|| Error::Crypto("no secret key available for signing".into()))?;
             let sig = dilithium3::detached_sign(message, sk);
             Ok(sig.as_bytes().to_vec())
@@ -187,7 +210,8 @@ mod pq_impl {
             if signature.len() != MLDSA_SIGNATURE_SIZE {
                 return Err(Error::Crypto(format!(
                     "invalid ML-DSA signature size: expected {}, got {}",
-                    MLDSA_SIGNATURE_SIZE, signature.len()
+                    MLDSA_SIGNATURE_SIZE,
+                    signature.len()
                 )));
             }
             let sig = dilithium3::DetachedSignature::from_bytes(signature)
@@ -230,7 +254,10 @@ mod pq_impl {
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    enum HandshakeRole { Initiator, Responder }
+    enum HandshakeRole {
+        Initiator,
+        Responder,
+    }
 
     pub struct HybridHandshake {
         x25519_secret: Option<EphemeralSecret>,
@@ -244,7 +271,12 @@ mod pq_impl {
             let x25519_secret = EphemeralSecret::random_from_rng(OsRng);
             let x25519_public = X25519PublicKey::from(&x25519_secret);
             let mlkem = PQKeyExchange::generate()?;
-            Ok(Self { x25519_secret: Some(x25519_secret), x25519_public, mlkem, role: HandshakeRole::Initiator })
+            Ok(Self {
+                x25519_secret: Some(x25519_secret),
+                x25519_public,
+                mlkem,
+                role: HandshakeRole::Initiator,
+            })
         }
 
         pub fn public_data(&self) -> HybridInitiatorData {
@@ -254,27 +286,45 @@ mod pq_impl {
             }
         }
 
-        pub fn respond(initiator_data: &HybridInitiatorData) -> Result<(Self, HybridResponderData)> {
+        pub fn respond(
+            initiator_data: &HybridInitiatorData,
+        ) -> Result<(Self, HybridResponderData)> {
             if initiator_data.mlkem_public_key.len() != MLKEM_PUBLIC_KEY_SIZE {
                 return Err(Error::Crypto(format!(
                     "invalid initiator ML-KEM public key size: expected {}, got {}",
-                    MLKEM_PUBLIC_KEY_SIZE, initiator_data.mlkem_public_key.len()
+                    MLKEM_PUBLIC_KEY_SIZE,
+                    initiator_data.mlkem_public_key.len()
                 )));
             }
             let x25519_secret = EphemeralSecret::random_from_rng(OsRng);
             let x25519_public = X25519PublicKey::from(&x25519_secret);
             let mlkem = PQKeyExchange::generate()?;
             let (mlkem_ciphertext, _) = mlkem.encapsulate(&initiator_data.mlkem_public_key)?;
-            let response = HybridResponderData { x25519_public_key: x25519_public.to_bytes(), mlkem_ciphertext };
-            let handshake = Self { x25519_secret: Some(x25519_secret), x25519_public, mlkem, role: HandshakeRole::Responder };
+            let response = HybridResponderData {
+                x25519_public_key: x25519_public.to_bytes(),
+                mlkem_ciphertext,
+            };
+            let handshake = Self {
+                x25519_secret: Some(x25519_secret),
+                x25519_public,
+                mlkem,
+                role: HandshakeRole::Responder,
+            };
             Ok((handshake, response))
         }
 
-        pub fn finalize(mut self, responder_data: &HybridResponderData) -> Result<HybridSharedSecret> {
+        pub fn finalize(
+            mut self,
+            responder_data: &HybridResponderData,
+        ) -> Result<HybridSharedSecret> {
             if self.role != HandshakeRole::Initiator {
-                return Err(Error::Crypto("finalize() can only be called by initiator".into()));
+                return Err(Error::Crypto(
+                    "finalize() can only be called by initiator".into(),
+                ));
             }
-            let x25519_secret = self.x25519_secret.take()
+            let x25519_secret = self
+                .x25519_secret
+                .take()
                 .ok_or_else(|| Error::Crypto("X25519 secret already consumed".into()))?;
             let peer = X25519PublicKey::from(responder_data.x25519_public_key);
             let x25519_shared = x25519_secret.diffie_hellman(&peer);
@@ -282,18 +332,29 @@ mod pq_impl {
             Self::derive_hybrid_secret(x25519_shared.as_bytes(), &mlkem_shared)
         }
 
-        pub fn complete(mut self, initiator_data: &HybridInitiatorData, mlkem_shared: &[u8; 32]) -> Result<HybridSharedSecret> {
+        pub fn complete(
+            mut self,
+            initiator_data: &HybridInitiatorData,
+            mlkem_shared: &[u8; 32],
+        ) -> Result<HybridSharedSecret> {
             if self.role != HandshakeRole::Responder {
-                return Err(Error::Crypto("complete() can only be called by responder".into()));
+                return Err(Error::Crypto(
+                    "complete() can only be called by responder".into(),
+                ));
             }
-            let x25519_secret = self.x25519_secret.take()
+            let x25519_secret = self
+                .x25519_secret
+                .take()
                 .ok_or_else(|| Error::Crypto("X25519 secret already consumed".into()))?;
             let peer = X25519PublicKey::from(initiator_data.x25519_public_key);
             let x25519_shared = x25519_secret.diffie_hellman(&peer);
             Self::derive_hybrid_secret(x25519_shared.as_bytes(), mlkem_shared)
         }
 
-        fn derive_hybrid_secret(x25519_shared: &[u8], mlkem_shared: &[u8; 32]) -> Result<HybridSharedSecret> {
+        fn derive_hybrid_secret(
+            x25519_shared: &[u8],
+            mlkem_shared: &[u8; 32],
+        ) -> Result<HybridSharedSecret> {
             let mut ikm = Vec::with_capacity(x25519_shared.len() + mlkem_shared.len());
             ikm.extend_from_slice(x25519_shared);
             ikm.extend_from_slice(mlkem_shared);
@@ -306,12 +367,16 @@ mod pq_impl {
         }
     }
 
-    pub fn hybrid_handshake() -> Result<([u8; HYBRID_SHARED_SECRET_SIZE], [u8; HYBRID_SHARED_SECRET_SIZE])> {
+    pub fn hybrid_handshake() -> Result<(
+        [u8; HYBRID_SHARED_SECRET_SIZE],
+        [u8; HYBRID_SHARED_SECRET_SIZE],
+    )> {
         let initiator = HybridHandshake::initiate()?;
         let init_data = initiator.public_data();
         let (responder, resp_data) = HybridHandshake::respond(&init_data)?;
         let mlkem_for_responder = PQKeyExchange::generate()?;
-        let (_, mlkem_shared_responder) = mlkem_for_responder.encapsulate(&init_data.mlkem_public_key)?;
+        let (_, mlkem_shared_responder) =
+            mlkem_for_responder.encapsulate(&init_data.mlkem_public_key)?;
         let initiator_secret = initiator.finalize(&resp_data)?;
         let responder_secret = responder.complete(&init_data, &mlkem_shared_responder)?;
         Ok((initiator_secret.into_bytes(), responder_secret.into_bytes()))
