@@ -111,7 +111,7 @@ impl Config {
 
     /// Get default config path
     pub fn default_path() -> PathBuf {
-        directories::ProjectDirs::from("ai", "hanzo", "zap")
+        directories::ProjectDirs::from("", "zap-proto", "zap")
             .map(|dirs| dirs.config_dir().join("config.toml"))
             .unwrap_or_else(|| PathBuf::from("zap.toml"))
     }
