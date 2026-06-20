@@ -11,7 +11,6 @@ import asyncio
 import hashlib
 import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 from .identity import Did
 
@@ -25,7 +24,7 @@ class Query:
     timestamp: int
 
     @classmethod
-    def create(cls, content: str, submitter: Did) -> "Query":
+    def create(cls, content: str, submitter: Did) -> Query:
         """Create a new query with auto-generated ID."""
         timestamp = int(time.time())
         hasher = hashlib.blake2b(digest_size=32)
@@ -50,7 +49,7 @@ class Response:
     timestamp: int
 
     @classmethod
-    def create(cls, query_id: bytes, content: str, responder: Did) -> "Response":
+    def create(cls, query_id: bytes, content: str, responder: Did) -> Response:
         """Create a new response with auto-generated ID."""
         timestamp = int(time.time())
         hasher = hashlib.blake2b(digest_size=32)
@@ -80,9 +79,9 @@ class ConsensusResult:
 class QueryState:
     """Internal state for a query."""
     query: Query
-    responses: Dict[bytes, Response] = field(default_factory=dict)
-    votes: Dict[bytes, List[Did]] = field(default_factory=dict)
-    finalized: Optional[bytes] = None
+    responses: dict[bytes, Response] = field(default_factory=dict)
+    votes: dict[bytes, list[Did]] = field(default_factory=dict)
+    finalized: bytes | None = None
 
 
 class AgentConsensusVoting:
@@ -106,7 +105,7 @@ class AgentConsensusVoting:
         self.threshold = max(0.0, min(1.0, threshold))
         self.min_responses = min_responses
         self.min_votes = min_votes
-        self._queries: Dict[bytes, QueryState] = {}
+        self._queries: dict[bytes, QueryState] = {}
         self._lock = asyncio.Lock()
 
     async def submit_query(self, query: Query) -> bytes:
@@ -164,7 +163,7 @@ class AgentConsensusVoting:
             return
 
         # Find response with most votes that meets threshold
-        best: Optional[tuple[bytes, int]] = None
+        best: tuple[bytes, int] | None = None
         for response_id, voters in state.votes.items():
             vote_count = len(voters)
             confidence = vote_count / total_votes if total_votes > 0 else 0
@@ -176,7 +175,7 @@ class AgentConsensusVoting:
         if best is not None:
             state.finalized = best[0]
 
-    async def get_result(self, query_id: bytes) -> Optional[ConsensusResult]:
+    async def get_result(self, query_id: bytes) -> ConsensusResult | None:
         """Get the consensus result for a query."""
         async with self._lock:
             state = self._queries.get(query_id)
@@ -200,7 +199,7 @@ class AgentConsensusVoting:
             state = self._queries.get(query_id)
             return state is not None and state.finalized is not None
 
-    async def get_responses(self, query_id: bytes) -> Optional[List[Response]]:
+    async def get_responses(self, query_id: bytes) -> list[Response] | None:
         """Get all responses for a query."""
         async with self._lock:
             state = self._queries.get(query_id)
@@ -208,7 +207,7 @@ class AgentConsensusVoting:
                 return None
             return list(state.responses.values())
 
-    async def get_vote_counts(self, query_id: bytes) -> Optional[Dict[bytes, int]]:
+    async def get_vote_counts(self, query_id: bytes) -> dict[bytes, int] | None:
         """Get vote counts for a query."""
         async with self._lock:
             state = self._queries.get(query_id)
@@ -222,10 +221,10 @@ class AgentConsensusVoting:
 async def consensus_decide(
     query: str,
     submitter: Did,
-    responses: List[tuple[str, Did]],
-    votes: List[tuple[int, Did]],
+    responses: list[tuple[str, Did]],
+    votes: list[tuple[int, Did]],
     threshold: float = 0.5,
-) -> Optional[ConsensusResult]:
+) -> ConsensusResult | None:
     """
     One-shot consensus decision.
 

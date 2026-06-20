@@ -32,47 +32,58 @@ Example:
 
 from __future__ import annotations
 
-import hashlib
-import hmac
-import os
-import secrets
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Tuple
 
 # Attempt to import pqcrypto bindings
 # Falls back to stub implementations if not available
 try:
-    from pqcrypto.kem.kyber768 import (
-        generate_keypair as mlkem_keypair,
-        encrypt as mlkem_encapsulate,
-        decrypt as mlkem_decapsulate,
-        PUBLIC_KEY_SIZE as MLKEM_PUBLIC_KEY_SIZE,
+    from pqcrypto.kem.ml_kem_768 import (
         CIPHERTEXT_SIZE as MLKEM_CIPHERTEXT_SIZE,
     )
-    from pqcrypto.sign.dilithium3 import (
-        generate_keypair as mldsa_keypair,
-        sign as mldsa_sign,
-        verify as mldsa_verify,
+    from pqcrypto.kem.ml_kem_768 import (
+        PUBLIC_KEY_SIZE as MLKEM_PUBLIC_KEY_SIZE,
+    )
+    from pqcrypto.kem.ml_kem_768 import (
+        decrypt as mlkem_decapsulate,
+    )
+    from pqcrypto.kem.ml_kem_768 import (
+        encrypt as mlkem_encapsulate,
+    )
+    from pqcrypto.kem.ml_kem_768 import (
+        generate_keypair as mlkem_keypair,
+    )
+    from pqcrypto.sign.ml_dsa_65 import (
         PUBLIC_KEY_SIZE as MLDSA_PUBLIC_KEY_SIZE,
+    )
+    from pqcrypto.sign.ml_dsa_65 import (
         SIGNATURE_SIZE as MLDSA_SIGNATURE_SIZE,
+    )
+    from pqcrypto.sign.ml_dsa_65 import (
+        generate_keypair as mldsa_keypair,
+    )
+    from pqcrypto.sign.ml_dsa_65 import (
+        sign as mldsa_sign,
+    )
+    from pqcrypto.sign.ml_dsa_65 import (
+        verify as mldsa_verify,
     )
     PQ_AVAILABLE = True
 except ImportError:
     PQ_AVAILABLE = False
-    # Placeholder sizes for when pqcrypto is not available
+    # Placeholder sizes for when pqcrypto is not available (FIPS 203/204 ML-KEM-768 / ML-DSA-65)
     MLKEM_PUBLIC_KEY_SIZE = 1184
     MLKEM_CIPHERTEXT_SIZE = 1088
     MLDSA_PUBLIC_KEY_SIZE = 1952
-    MLDSA_SIGNATURE_SIZE = 3293
+    MLDSA_SIGNATURE_SIZE = 3309
 
 # Attempt to import X25519 from cryptography
 try:
+    from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.asymmetric.x25519 import (
         X25519PrivateKey,
         X25519PublicKey,
     )
-    from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.kdf.hkdf import HKDF
     X25519_AVAILABLE = True
 except ImportError:
@@ -97,12 +108,12 @@ class PQKeyExchange:
     Security level: NIST Level 3 (~AES-192 equivalent).
     """
 
-    def __init__(self, public_key: bytes, secret_key: Optional[bytes] = None):
+    def __init__(self, public_key: bytes, secret_key: bytes | None = None):
         self._public_key = public_key
         self._secret_key = secret_key
 
     @classmethod
-    def generate(cls) -> "PQKeyExchange":
+    def generate(cls) -> PQKeyExchange:
         """Generate a new ML-KEM-768 keypair."""
         if not PQ_AVAILABLE:
             raise CryptoError("pqcrypto not available - install with: pip install pqcrypto")
@@ -110,7 +121,7 @@ class PQKeyExchange:
         return cls(pk, sk)
 
     @classmethod
-    def from_public_key(cls, public_key: bytes) -> "PQKeyExchange":
+    def from_public_key(cls, public_key: bytes) -> PQKeyExchange:
         """Create instance from public key (for encapsulation only)."""
         if len(public_key) != MLKEM_PUBLIC_KEY_SIZE:
             raise CryptoError(
@@ -124,7 +135,7 @@ class PQKeyExchange:
         """Get the public key bytes."""
         return self._public_key
 
-    def encapsulate(self, recipient_pk: bytes) -> Tuple[bytes, bytes]:
+    def encapsulate(self, recipient_pk: bytes) -> tuple[bytes, bytes]:
         """
         Encapsulate: generate ciphertext and shared secret for a recipient's public key.
 
@@ -163,7 +174,7 @@ class PQKeyExchange:
                 f"Invalid ML-KEM ciphertext size: expected {MLKEM_CIPHERTEXT_SIZE}, "
                 f"got {len(ciphertext)}"
             )
-        return mlkem_decapsulate(ciphertext, self._secret_key)
+        return bytes(mlkem_decapsulate(self._secret_key, ciphertext))
 
 
 class PQSignature:
@@ -174,12 +185,12 @@ class PQSignature:
     Security level: NIST Level 3 (~AES-192 equivalent).
     """
 
-    def __init__(self, public_key: bytes, secret_key: Optional[bytes] = None):
+    def __init__(self, public_key: bytes, secret_key: bytes | None = None):
         self._public_key = public_key
         self._secret_key = secret_key
 
     @classmethod
-    def generate(cls) -> "PQSignature":
+    def generate(cls) -> PQSignature:
         """Generate a new ML-DSA-65 keypair."""
         if not PQ_AVAILABLE:
             raise CryptoError("pqcrypto not available - install with: pip install pqcrypto")
@@ -187,7 +198,7 @@ class PQSignature:
         return cls(pk, sk)
 
     @classmethod
-    def from_public_key(cls, public_key: bytes) -> "PQSignature":
+    def from_public_key(cls, public_key: bytes) -> PQSignature:
         """Create instance from public key (for verification only)."""
         if len(public_key) != MLDSA_PUBLIC_KEY_SIZE:
             raise CryptoError(
@@ -215,7 +226,7 @@ class PQSignature:
             raise CryptoError("pqcrypto not available")
         if self._secret_key is None:
             raise CryptoError("No secret key available for signing")
-        return mldsa_sign(message, self._secret_key)
+        return bytes(mldsa_sign(self._secret_key, message))
 
     def verify(self, message: bytes, signature: bytes) -> bool:
         """
@@ -236,10 +247,9 @@ class PQSignature:
                 f"got {len(signature)}"
             )
         try:
-            mldsa_verify(message, signature, self._public_key)
-            return True
-        except Exception:
-            raise CryptoError("Signature verification failed")
+            return bool(mldsa_verify(self._public_key, message, signature))
+        except Exception as exc:
+            raise CryptoError("Signature verification failed") from exc
 
 
 @dataclass
@@ -275,7 +285,7 @@ class HybridHandshake:
 
     def __init__(
         self,
-        x25519_private: Optional[bytes],
+        x25519_private: bytes | None,
         x25519_public: bytes,
         mlkem: PQKeyExchange,
         role: HandshakeRole,
@@ -286,7 +296,7 @@ class HybridHandshake:
         self._role = role
 
     @classmethod
-    def initiate(cls) -> "HybridHandshake":
+    def initiate(cls) -> HybridHandshake:
         """
         Initiate a hybrid handshake (client side).
 
@@ -328,7 +338,7 @@ class HybridHandshake:
     @classmethod
     def respond(
         cls, initiator_data: HybridInitiatorData
-    ) -> Tuple["HybridHandshake", HybridResponderData]:
+    ) -> tuple[HybridHandshake, HybridResponderData]:
         """
         Respond to a hybrid handshake (server side).
 
@@ -412,7 +422,7 @@ class HybridHandshake:
     def complete(
         self,
         initiator_data: HybridInitiatorData,
-        mlkem_shared: Optional[bytes] = None,
+        mlkem_shared: bytes | None = None,
     ) -> bytes:
         """
         Complete the handshake and derive the shared secret (responder side).
@@ -469,10 +479,10 @@ class HybridHandshake:
             salt=b"ZAP-HYBRID-HANDSHAKE-v1",
             info=b"shared-secret",
         )
-        return hkdf.derive(ikm)
+        return bytes(hkdf.derive(ikm))
 
 
-def hybrid_handshake() -> Tuple[bytes, bytes]:
+def hybrid_handshake() -> tuple[bytes, bytes]:
     """
     Perform a complete hybrid handshake between two parties.
 

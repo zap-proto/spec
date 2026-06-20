@@ -1,140 +1,195 @@
-"""Tests for zap_schema.crypto module."""
+"""Tests for zap_schema.crypto module.
+
+These exercise the real ML-KEM-768 / ML-DSA-65 / hybrid handshake API. When the
+optional post-quantum backends (cryptography, pqcrypto) are absent the module
+degrades gracefully and these tests are skipped.
+"""
 
 import pytest
+
 from zap_schema import crypto
+from zap_schema.crypto import (
+    HYBRID_SHARED_SECRET_SIZE,
+    MLDSA_PUBLIC_KEY_SIZE,
+    MLDSA_SIGNATURE_SIZE,
+    MLKEM_CIPHERTEXT_SIZE,
+    MLKEM_PUBLIC_KEY_SIZE,
+    CryptoError,
+    HandshakeRole,
+    HybridHandshake,
+    HybridInitiatorData,
+    HybridResponderData,
+    PQKeyExchange,
+    PQSignature,
+)
+
+pq = pytest.mark.skipif(not crypto.PQ_AVAILABLE, reason="pqcrypto not installed")
+hybrid = pytest.mark.skipif(
+    not (crypto.PQ_AVAILABLE and crypto.X25519_AVAILABLE),
+    reason="cryptography + pqcrypto required",
+)
 
 
-class TestHashFunctions:
-    """Tests for hash functions."""
+class TestConstants:
+    """Module-level size constants follow FIPS 203/204."""
 
-    def test_blake3_hash(self):
-        """Test BLAKE3 hashing."""
-        if not hasattr(crypto, 'blake3_hash'):
-            pytest.skip("blake3_hash not implemented")
-
-        data = b"hello world"
-        hash1 = crypto.blake3_hash(data)
-        hash2 = crypto.blake3_hash(data)
-
-        assert hash1 == hash2
-        assert len(hash1) == 32
-
-    def test_blake3_hash_different_inputs(self):
-        """Test BLAKE3 produces different hashes for different inputs."""
-        if not hasattr(crypto, 'blake3_hash'):
-            pytest.skip("blake3_hash not implemented")
-
-        hash1 = crypto.blake3_hash(b"hello")
-        hash2 = crypto.blake3_hash(b"world")
-
-        assert hash1 != hash2
+    def test_sizes(self):
+        assert MLKEM_PUBLIC_KEY_SIZE == 1184
+        assert MLKEM_CIPHERTEXT_SIZE == 1088
+        assert MLDSA_PUBLIC_KEY_SIZE == 1952
+        assert MLDSA_SIGNATURE_SIZE == 3309
+        assert HYBRID_SHARED_SECRET_SIZE == 32
 
 
-class TestKeyGeneration:
-    """Tests for key generation functions."""
+@pq
+class TestPQKeyExchange:
+    """ML-KEM-768 key encapsulation."""
 
-    def test_generate_keypair(self):
-        """Test generating a keypair."""
-        if not hasattr(crypto, 'generate_keypair'):
-            pytest.skip("generate_keypair not implemented")
+    def test_generate_public_key_size(self):
+        kx = PQKeyExchange.generate()
+        assert len(kx.public_key) == MLKEM_PUBLIC_KEY_SIZE
+        assert isinstance(kx.public_key, bytes)
 
-        public_key, secret_key = crypto.generate_keypair()
-        assert len(public_key) == 32  # Ed25519 public key
-        assert len(secret_key) == 64  # Ed25519 secret key
+    def test_generate_unique(self):
+        assert PQKeyExchange.generate().public_key != PQKeyExchange.generate().public_key
 
-    def test_generate_keypair_unique(self):
-        """Test that each keypair is unique."""
-        if not hasattr(crypto, 'generate_keypair'):
-            pytest.skip("generate_keypair not implemented")
+    def test_encapsulate_decapsulate_roundtrip(self):
+        alice = PQKeyExchange.generate()
+        bob = PQKeyExchange.generate()
+        ciphertext, shared_alice = alice.encapsulate(bob.public_key)
+        shared_bob = bob.decapsulate(ciphertext)
+        assert shared_alice == shared_bob
+        assert len(ciphertext) == MLKEM_CIPHERTEXT_SIZE
+        assert isinstance(shared_bob, bytes)
 
-        pk1, _ = crypto.generate_keypair()
-        pk2, _ = crypto.generate_keypair()
+    def test_from_public_key(self):
+        original = PQKeyExchange.generate()
+        restored = PQKeyExchange.from_public_key(original.public_key)
+        assert restored.public_key == original.public_key
 
-        assert pk1 != pk2
+    def test_from_public_key_bad_size(self):
+        with pytest.raises(CryptoError, match="Invalid ML-KEM public key size"):
+            PQKeyExchange.from_public_key(b"too-short")
+
+    def test_encapsulate_bad_recipient_size(self):
+        with pytest.raises(CryptoError, match="Invalid recipient public key size"):
+            PQKeyExchange.generate().encapsulate(b"nope")
+
+    def test_decapsulate_bad_ciphertext_size(self):
+        with pytest.raises(CryptoError, match="Invalid ML-KEM ciphertext size"):
+            PQKeyExchange.generate().decapsulate(b"nope")
+
+    def test_decapsulate_without_secret_key(self):
+        kx = PQKeyExchange.from_public_key(PQKeyExchange.generate().public_key)
+        with pytest.raises(CryptoError, match="No secret key"):
+            kx.decapsulate(bytes(MLKEM_CIPHERTEXT_SIZE))
 
 
-class TestSignatureVerification:
-    """Tests for signature operations."""
+@pq
+class TestPQSignature:
+    """ML-DSA-65 digital signatures."""
+
+    def test_generate_public_key_size(self):
+        sig = PQSignature.generate()
+        assert len(sig.public_key) == MLDSA_PUBLIC_KEY_SIZE
 
     def test_sign_and_verify(self):
-        """Test signing and verifying a message."""
-        if not hasattr(crypto, 'sign') or not hasattr(crypto, 'verify'):
-            pytest.skip("sign/verify not implemented")
+        signer = PQSignature.generate()
+        signature = signer.sign(b"the quick brown fox")
+        assert len(signature) == MLDSA_SIGNATURE_SIZE
+        assert isinstance(signature, bytes)
+        assert signer.verify(b"the quick brown fox", signature) is True
 
-        public_key, secret_key = crypto.generate_keypair()
-        message = b"test message"
+    def test_verify_tampered_signature_returns_false(self):
+        signer = PQSignature.generate()
+        signature = signer.sign(b"message")
+        tampered = bytes([(signature[0] + 1) % 256]) + signature[1:]
+        assert signer.verify(b"message", tampered) is False
 
-        signature = crypto.sign(message, secret_key)
-        assert crypto.verify(message, signature, public_key)
+    def test_verify_wrong_message_returns_false(self):
+        signer = PQSignature.generate()
+        signature = signer.sign(b"original")
+        assert signer.verify(b"different", signature) is False
 
-    def test_verify_invalid_signature(self):
-        """Test verification fails with invalid signature."""
-        if not hasattr(crypto, 'sign') or not hasattr(crypto, 'verify'):
-            pytest.skip("sign/verify not implemented")
+    def test_verify_with_public_key_only(self):
+        signer = PQSignature.generate()
+        signature = signer.sign(b"hi")
+        verifier = PQSignature.from_public_key(signer.public_key)
+        assert verifier.verify(b"hi", signature) is True
 
-        public_key, secret_key = crypto.generate_keypair()
-        message = b"test message"
+    def test_from_public_key_bad_size(self):
+        with pytest.raises(CryptoError, match="Invalid ML-DSA public key size"):
+            PQSignature.from_public_key(b"short")
 
-        signature = crypto.sign(message, secret_key)
-        # Corrupt signature
-        bad_signature = bytes([(b + 1) % 256 for b in signature])
+    def test_sign_without_secret_key(self):
+        verifier = PQSignature.from_public_key(PQSignature.generate().public_key)
+        with pytest.raises(CryptoError, match="No secret key"):
+            verifier.sign(b"x")
 
-        assert not crypto.verify(message, bad_signature, public_key)
-
-
-class TestHKDF:
-    """Tests for HKDF key derivation."""
-
-    def test_hkdf_derive(self):
-        """Test HKDF key derivation."""
-        if not hasattr(crypto, 'hkdf_derive'):
-            pytest.skip("hkdf_derive not implemented")
-
-        ikm = b"input key material"
-        salt = b"salt"
-        info = b"info"
-
-        derived = crypto.hkdf_derive(ikm, salt, info, 32)
-        assert len(derived) == 32
-
-    def test_hkdf_deterministic(self):
-        """Test HKDF is deterministic."""
-        if not hasattr(crypto, 'hkdf_derive'):
-            pytest.skip("hkdf_derive not implemented")
-
-        ikm = b"input key material"
-        salt = b"salt"
-        info = b"info"
-
-        derived1 = crypto.hkdf_derive(ikm, salt, info, 32)
-        derived2 = crypto.hkdf_derive(ikm, salt, info, 32)
-
-        assert derived1 == derived2
+    def test_verify_bad_signature_size(self):
+        with pytest.raises(CryptoError, match="Invalid ML-DSA signature size"):
+            PQSignature.generate().verify(b"x", b"short-sig")
 
 
-class TestAEAD:
-    """Tests for AEAD encryption."""
+@hybrid
+class TestHybridHandshake:
+    """X25519 + ML-KEM-768 hybrid handshake."""
 
-    def test_aead_encrypt_decrypt(self):
-        """Test AEAD encrypt/decrypt roundtrip."""
-        if not hasattr(crypto, 'aead_encrypt') or not hasattr(crypto, 'aead_decrypt'):
-            pytest.skip("AEAD not implemented")
+    def test_full_handshake_derives_secrets(self):
+        initiator = HybridHandshake.initiate()
+        assert initiator._role is HandshakeRole.INITIATOR
 
-        key = bytes(32)  # 256-bit key
-        nonce = bytes(12)
-        plaintext = b"secret message"
-        aad = b"additional data"
+        public_data = initiator.public_data
+        assert isinstance(public_data, HybridInitiatorData)
+        assert len(public_data.x25519_public_key) == 32
+        assert len(public_data.mlkem_public_key) == MLKEM_PUBLIC_KEY_SIZE
 
-        ciphertext = crypto.aead_encrypt(key, nonce, plaintext, aad)
-        decrypted = crypto.aead_decrypt(key, nonce, ciphertext, aad)
+        responder, response = HybridHandshake.respond(public_data)
+        assert responder._role is HandshakeRole.RESPONDER
+        assert isinstance(response, HybridResponderData)
 
-        assert decrypted == plaintext
+        secret = initiator.finalize(response)
+        assert len(secret) == HYBRID_SHARED_SECRET_SIZE
+        assert isinstance(secret, bytes)
 
+        responder_secret = responder.complete(public_data)
+        assert len(responder_secret) == HYBRID_SHARED_SECRET_SIZE
 
-class TestCryptoModule:
-    """General crypto module tests."""
+    def test_derive_hybrid_secret_deterministic(self):
+        a = HybridHandshake._derive_hybrid_secret(b"x" * 32, b"y" * 32)
+        b = HybridHandshake._derive_hybrid_secret(b"x" * 32, b"y" * 32)
+        assert a == b
+        assert len(a) == HYBRID_SHARED_SECRET_SIZE
+        assert isinstance(a, bytes)
 
-    def test_module_has_constants(self):
-        """Test crypto module has expected constants."""
-        # Just test the module is importable and has some content
-        assert hasattr(crypto, '__name__')
+    def test_derive_hybrid_secret_input_sensitive(self):
+        a = HybridHandshake._derive_hybrid_secret(b"x" * 32, b"y" * 32)
+        b = HybridHandshake._derive_hybrid_secret(b"x" * 32, b"z" * 32)
+        assert a != b
+
+    def test_finalize_only_by_initiator(self):
+        _, response = HybridHandshake.respond(HybridHandshake.initiate().public_data)
+        responder, _ = HybridHandshake.respond(HybridHandshake.initiate().public_data)
+        with pytest.raises(CryptoError, match="finalize"):
+            responder.finalize(response)
+
+    def test_complete_only_by_responder(self):
+        initiator = HybridHandshake.initiate()
+        with pytest.raises(CryptoError, match="complete"):
+            initiator.complete(initiator.public_data)
+
+    def test_respond_rejects_bad_x25519_size(self):
+        bad = HybridInitiatorData(
+            x25519_public_key=b"short",
+            mlkem_public_key=bytes(MLKEM_PUBLIC_KEY_SIZE),
+        )
+        with pytest.raises(CryptoError, match="Invalid X25519 public key size"):
+            HybridHandshake.respond(bad)
+
+    def test_respond_rejects_bad_mlkem_size(self):
+        bad = HybridInitiatorData(
+            x25519_public_key=bytes(32),
+            mlkem_public_key=b"short",
+        )
+        with pytest.raises(CryptoError, match="Invalid ML-KEM public key size"):
+            HybridHandshake.respond(bad)
