@@ -26,12 +26,10 @@ Example:
 
 from __future__ import annotations
 
-import hashlib
 import json
-import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Protocol, Tuple, Union
+from typing import Any, Protocol
 
 # Base58 alphabet (Bitcoin style)
 BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
@@ -117,14 +115,14 @@ class ServiceType(Enum):
 class ServiceEndpoint:
     """Service endpoint configuration."""
     uri: str
-    accept: Optional[List[str]] = None
-    routing_keys: Optional[List[str]] = None
+    accept: list[str] | None = None
+    routing_keys: list[str] | None = None
 
-    def to_dict(self) -> Union[str, Dict[str, Any]]:
+    def to_dict(self) -> str | dict[str, Any]:
         """Convert to JSON-serializable format."""
         if self.accept is None and self.routing_keys is None:
             return self.uri
-        result: Dict[str, Any] = {"uri": self.uri}
+        result: dict[str, Any] = {"uri": self.uri}
         if self.accept:
             result["accept"] = self.accept
         if self.routing_keys:
@@ -138,13 +136,13 @@ class VerificationMethod:
     id: str
     type: VerificationMethodType
     controller: str
-    public_key_multibase: Optional[str] = None
-    public_key_jwk: Optional[Dict[str, Any]] = None
-    blockchain_account_id: Optional[str] = None
+    public_key_multibase: str | None = None
+    public_key_jwk: dict[str, Any] | None = None
+    blockchain_account_id: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable format."""
-        result = {
+        result: dict[str, Any] = {
             "id": self.id,
             "type": self.type.value,
             "controller": self.controller,
@@ -165,7 +163,7 @@ class Service:
     type: ServiceType
     service_endpoint: ServiceEndpoint
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable format."""
         return {
             "id": self.id,
@@ -178,40 +176,40 @@ class Service:
 class DidDocument:
     """W3C DID Document."""
     id: str
-    context: List[str] = field(default_factory=lambda: [
+    context: list[str] = field(default_factory=lambda: [
         "https://www.w3.org/ns/did/v1",
         "https://w3id.org/security/suites/jws-2020/v1",
     ])
-    controller: Optional[str] = None
-    verification_method: List[VerificationMethod] = field(default_factory=list)
-    authentication: List[str] = field(default_factory=list)
-    assertion_method: List[str] = field(default_factory=list)
-    key_agreement: List[str] = field(default_factory=list)
-    capability_invocation: List[str] = field(default_factory=list)
-    capability_delegation: List[str] = field(default_factory=list)
-    service: List[Service] = field(default_factory=list)
+    controller: str | None = None
+    verification_method: list[VerificationMethod] = field(default_factory=list)
+    authentication: list[str] = field(default_factory=list)
+    assertion_method: list[str] = field(default_factory=list)
+    key_agreement: list[str] = field(default_factory=list)
+    capability_invocation: list[str] = field(default_factory=list)
+    capability_delegation: list[str] = field(default_factory=list)
+    service: list[Service] = field(default_factory=list)
 
-    def primary_verification_method(self) -> Optional[VerificationMethod]:
+    def primary_verification_method(self) -> VerificationMethod | None:
         """Get the primary verification method."""
         return self.verification_method[0] if self.verification_method else None
 
-    def get_verification_method(self, id: str) -> Optional[VerificationMethod]:
+    def get_verification_method(self, id: str) -> VerificationMethod | None:
         """Get a verification method by ID."""
         for vm in self.verification_method:
             if vm.id == id:
                 return vm
         return None
 
-    def get_service(self, id: str) -> Optional[Service]:
+    def get_service(self, id: str) -> Service | None:
         """Get a service by ID."""
         for svc in self.service:
             if svc.id == id:
                 return svc
         return None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable format."""
-        result: Dict[str, Any] = {
+        result: dict[str, Any] = {
             "@context": self.context,
             "id": self.id,
         }
@@ -238,13 +236,13 @@ class DidDocument:
         return json.dumps(self.to_dict(), indent=indent)
 
     @classmethod
-    def from_json(cls, json_str: str) -> "DidDocument":
+    def from_json(cls, json_str: str) -> DidDocument:
         """Deserialize from JSON string."""
         data = json.loads(json_str)
         return cls.from_dict(data)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "DidDocument":
+    def from_dict(cls, data: dict[str, Any]) -> DidDocument:
         """Create from dictionary."""
         verification_methods = []
         for vm_data in data.get("verificationMethod", []):
@@ -446,7 +444,7 @@ def create_did_from_key(public_key: bytes, method: DidMethod = DidMethod.KEY) ->
     return Did(method=method, id=did_id)
 
 
-def create_did_from_web(domain: str, path: Optional[str] = None) -> Did:
+def create_did_from_web(domain: str, path: str | None = None) -> Did:
     """
     Create a web DID from a domain and optional path.
 
@@ -500,7 +498,7 @@ class InMemoryStakeRegistry:
     """In-memory stake registry for testing."""
 
     def __init__(self) -> None:
-        self._stakes: Dict[str, int] = {}
+        self._stakes: dict[str, int] = {}
 
     def get_stake(self, did: Did) -> int:
         """Get the staked amount for a DID."""
@@ -536,9 +534,9 @@ class NodeIdentity:
     """
     did: Did
     public_key: bytes
-    stake: Optional[int] = None
-    stake_registry: Optional[str] = None
-    _signer: Optional[Any] = field(default=None, repr=False)
+    stake: int | None = None
+    stake_registry: str | None = None
+    _signer: Any | None = field(default=None, repr=False)
 
     def can_sign(self) -> bool:
         """Check if this node has signing capability."""
@@ -548,17 +546,17 @@ class NodeIdentity:
         """Sign a message with this node's private key."""
         if self._signer is None:
             raise IdentityError("no private key available for signing")
-        return self._signer.sign(message)
+        return bytes(self._signer.sign(message))
 
     def verify(self, message: bytes, signature: bytes) -> bool:
         """Verify a signature against this node's public key."""
         try:
-            from .crypto import PQSignature, PQ_AVAILABLE
+            from .crypto import PQ_AVAILABLE, PQSignature
             if not PQ_AVAILABLE:
                 raise IdentityError("verification requires pqcrypto")
 
             if self._signer is not None:
-                return self._signer.verify(message, signature)
+                return bool(self._signer.verify(message, signature))
             else:
                 verifier = PQSignature.from_public_key(self.public_key)
                 return verifier.verify(message, signature)
@@ -569,12 +567,12 @@ class NodeIdentity:
         """Get the DID document for this node identity."""
         return self.did.document()
 
-    def with_stake(self, amount: int) -> "NodeIdentity":
+    def with_stake(self, amount: int) -> NodeIdentity:
         """Set the stake amount for this node."""
         self.stake = amount
         return self
 
-    def with_registry(self, registry: str) -> "NodeIdentity":
+    def with_registry(self, registry: str) -> NodeIdentity:
         """Set the stake registry reference."""
         self.stake_registry = registry
         return self
@@ -600,7 +598,7 @@ def generate_identity(method: DidMethod = DidMethod.LUX) -> NodeIdentity:
         True
     """
     try:
-        from .crypto import PQSignature, PQ_AVAILABLE
+        from .crypto import PQ_AVAILABLE, PQSignature
         if not PQ_AVAILABLE:
             raise IdentityError("identity generation requires pqcrypto")
 

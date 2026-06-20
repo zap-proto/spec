@@ -15,14 +15,12 @@ Example:
     >>> asyncio.run(main())
 """
 
+from . import agent_consensus, crypto, identity
 from .client import Client
-from .server import Server
-from .gateway import Gateway
 from .config import Config, ServerConfig
 from .error import ZapError
-from . import crypto
-from . import identity
-from . import agent_consensus
+from .gateway import Gateway
+from .server import Server
 
 __version__ = "0.2.1"
 __all__ = [
