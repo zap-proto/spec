@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any
 
-import tomllib
+if sys.version_info >= (3, 11):
+    import tomllib
+else:  # Python 3.10: tomllib was added to the stdlib in 3.11
+    import tomli as tomllib
 
 
 class Transport(Enum):
