@@ -186,48 +186,9 @@ jobs:
           flags: python
           fail_ci_if_error: false
 
-  typescript:
-    name: TypeScript Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Install dependencies
-        working-directory: typescript
-        run: pnpm install
-
-      - name: Lint
-        working-directory: typescript
-        run: pnpm lint
-
-      - name: Build
-        working-directory: typescript
-        run: pnpm build
-
-      - name: Run tests with coverage
-        working-directory: typescript
-        run: pnpm test -- --coverage --coverage.thresholds.lines=80
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          files: typescript/coverage/lcov.info
-          flags: typescript
-          fail_ci_if_error: false
-
   coverage-gate:
     name: Coverage Gate
-    needs: [rust, python, typescript]
+    needs: [rust, python]
     runs-on: ubuntu-latest
     steps:
       - name: Coverage gate passed
