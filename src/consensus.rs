@@ -151,7 +151,10 @@ fn vector_add(a: &PolyVector, b: &PolyVector) -> PolyVector {
 
 /// Add two matrices element-wise
 fn matrix_add(a: &PolyMatrix, b: &PolyMatrix) -> PolyMatrix {
-    a.iter().zip(b.iter()).map(|(row_a, row_b)| vector_add(row_a, row_b)).collect()
+    a.iter()
+        .zip(b.iter())
+        .map(|(row_a, row_b)| vector_add(row_a, row_b))
+        .collect()
 }
 
 /// Round 1 output from a party
@@ -194,13 +197,13 @@ impl Round1Output {
         let mut offset = 0;
 
         // Party ID
-        let party_id = u32::from_le_bytes(bytes[offset..offset+4].try_into().unwrap()) as usize;
+        let party_id = u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap()) as usize;
         offset += 4;
 
         // Matrix dimensions
-        let rows = u32::from_le_bytes(bytes[offset..offset+4].try_into().unwrap()) as usize;
+        let rows = u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap()) as usize;
         offset += 4;
-        let cols = u32::from_le_bytes(bytes[offset..offset+4].try_into().unwrap()) as usize;
+        let cols = u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap()) as usize;
         offset += 4;
 
         // Matrix data
@@ -209,7 +212,7 @@ impl Round1Output {
         for _ in 0..rows {
             let mut row = Vec::with_capacity(cols);
             for _ in 0..cols {
-                let poly = Poly::from_bytes(&bytes[offset..offset+poly_size])?;
+                let poly = Poly::from_bytes(&bytes[offset..offset + poly_size])?;
                 row.push(poly);
                 offset += poly_size;
             }
@@ -217,19 +220,23 @@ impl Round1Output {
         }
 
         // MACs
-        let mac_count = u32::from_le_bytes(bytes[offset..offset+4].try_into().unwrap()) as usize;
+        let mac_count = u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap()) as usize;
         offset += 4;
         let mut macs = HashMap::new();
         for _ in 0..mac_count {
-            let party = u32::from_le_bytes(bytes[offset..offset+4].try_into().unwrap()) as usize;
+            let party = u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap()) as usize;
             offset += 4;
             let mut mac = [0u8; KEY_SIZE];
-            mac.copy_from_slice(&bytes[offset..offset+KEY_SIZE]);
+            mac.copy_from_slice(&bytes[offset..offset + KEY_SIZE]);
             offset += KEY_SIZE;
             macs.insert(party, mac);
         }
 
-        Ok(Self { party_id, d_matrix, macs })
+        Ok(Self {
+            party_id,
+            d_matrix,
+            macs,
+        })
     }
 }
 
@@ -257,15 +264,15 @@ impl Round2Output {
     /// Deserialize from bytes
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let mut offset = 0;
-        let party_id = u32::from_le_bytes(bytes[offset..offset+4].try_into().unwrap()) as usize;
+        let party_id = u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap()) as usize;
         offset += 4;
-        let len = u32::from_le_bytes(bytes[offset..offset+4].try_into().unwrap()) as usize;
+        let len = u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap()) as usize;
         offset += 4;
 
         let poly_size = PHI * 8;
         let mut z_share = Vec::with_capacity(len);
         for _ in 0..len {
-            let poly = Poly::from_bytes(&bytes[offset..offset+poly_size])?;
+            let poly = Poly::from_bytes(&bytes[offset..offset + poly_size])?;
             z_share.push(poly);
             offset += poly_size;
         }
@@ -306,22 +313,22 @@ impl RingtailSignature {
         let poly_size = PHI * 8;
         let mut offset = 0;
 
-        let c = Poly::from_bytes(&bytes[offset..offset+poly_size])?;
+        let c = Poly::from_bytes(&bytes[offset..offset + poly_size])?;
         offset += poly_size;
 
-        let z_len = u32::from_le_bytes(bytes[offset..offset+4].try_into().unwrap()) as usize;
+        let z_len = u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap()) as usize;
         offset += 4;
         let mut z = Vec::with_capacity(z_len);
         for _ in 0..z_len {
-            z.push(Poly::from_bytes(&bytes[offset..offset+poly_size])?);
+            z.push(Poly::from_bytes(&bytes[offset..offset + poly_size])?);
             offset += poly_size;
         }
 
-        let delta_len = u32::from_le_bytes(bytes[offset..offset+4].try_into().unwrap()) as usize;
+        let delta_len = u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap()) as usize;
         offset += 4;
         let mut delta = Vec::with_capacity(delta_len);
         for _ in 0..delta_len {
-            delta.push(Poly::from_bytes(&bytes[offset..offset+poly_size])?);
+            delta.push(Poly::from_bytes(&bytes[offset..offset + poly_size])?);
             offset += poly_size;
         }
 
@@ -460,11 +467,14 @@ impl RingtailConsensus {
                 continue;
             }
 
-            self.peers.insert(peer_id, PeerConnection {
-                party_id: peer_id,
-                address: addr,
-                connected: true, // In real impl, actually connect
-            });
+            self.peers.insert(
+                peer_id,
+                PeerConnection {
+                    party_id: peer_id,
+                    address: addr,
+                    connected: true, // In real impl, actually connect
+                },
+            );
         }
         Ok(())
     }
@@ -475,8 +485,15 @@ impl RingtailConsensus {
     }
 
     /// Generate MAC for commitment matrix
-    fn generate_mac(&self, d: &PolyMatrix, recipient: usize, verify: bool) -> Result<[u8; KEY_SIZE]> {
-        let mac_key = self.mac_keys.get(&recipient)
+    fn generate_mac(
+        &self,
+        d: &PolyMatrix,
+        recipient: usize,
+        verify: bool,
+    ) -> Result<[u8; KEY_SIZE]> {
+        let mac_key = self
+            .mac_keys
+            .get(&recipient)
             .ok_or_else(|| Error::Crypto(format!("no MAC key for party {}", recipient)))?;
 
         // Hash: party_id || MAC_key || D || session_id || T
@@ -524,7 +541,9 @@ impl RingtailConsensus {
         let e_matrix = self.sample_e_matrix(message);
 
         // Compute D = A * R + E (simplified - in real impl uses NTT multiplication)
-        let a = self.public_a.as_ref()
+        let a = self
+            .public_a
+            .as_ref()
             .ok_or_else(|| Error::Protocol("public matrix A not set".into()))?;
 
         // D = A * R + E (M x (Dbar+1))
@@ -666,14 +685,14 @@ impl RingtailConsensus {
 
             // Check MAC sent to us
             let expected_mac = self.verify_mac(&output.d_matrix, output.party_id)?;
-            let received_mac = output.macs.get(&self.party_id)
-                .ok_or_else(|| Error::Crypto(format!(
-                    "no MAC from party {} for us", output.party_id
-                )))?;
+            let received_mac = output.macs.get(&self.party_id).ok_or_else(|| {
+                Error::Crypto(format!("no MAC from party {} for us", output.party_id))
+            })?;
 
             if expected_mac != *received_mac {
                 return Err(Error::Crypto(format!(
-                    "MAC verification failed for party {}", output.party_id
+                    "MAC verification failed for party {}",
+                    output.party_id
                 )));
             }
         }
@@ -685,11 +704,17 @@ impl RingtailConsensus {
         }
 
         // Compute response share z_i
-        let r = self.current_r.as_ref()
+        let r = self
+            .current_r
+            .as_ref()
             .ok_or_else(|| Error::Protocol("no current R matrix".into()))?;
-        let sk = self.sk_share.as_ref()
+        let sk = self
+            .sk_share
+            .as_ref()
             .ok_or_else(|| Error::Protocol("no secret key share".into()))?;
-        let lambda = self.lambda.as_ref()
+        let lambda = self
+            .lambda
+            .as_ref()
             .ok_or_else(|| Error::Protocol("no Lagrange coefficient".into()))?;
 
         // z_i = R_i * u + s_i * c * lambda_i (simplified)
@@ -739,11 +764,7 @@ impl RingtailConsensus {
         // Compute Delta correction (simplified)
         let delta = zero_vector(M);
 
-        Ok(RingtailSignature {
-            c,
-            z: z_sum,
-            delta,
-        })
+        Ok(RingtailSignature { c, z: z_sum, delta })
     }
 
     /// Compute challenge polynomial
@@ -844,7 +865,10 @@ pub struct AgentConsensus {
 impl AgentConsensus {
     /// Create new agent consensus with threshold
     pub fn new(threshold: f64, min_responses: usize) -> Self {
-        assert!(threshold > 0.0 && threshold <= 1.0, "threshold must be in (0, 1]");
+        assert!(
+            threshold > 0.0 && threshold <= 1.0,
+            "threshold must be in (0, 1]"
+        );
         assert!(min_responses >= 1, "need at least 1 response");
 
         Self {
@@ -883,17 +907,25 @@ impl AgentConsensus {
     }
 
     /// Submit a response from an agent
-    pub async fn submit_response(&self, query_id: &[u8; 32], agent_id: &str, response: &str) -> Result<()> {
+    pub async fn submit_response(
+        &self,
+        query_id: &[u8; 32],
+        agent_id: &str,
+        response: &str,
+    ) -> Result<()> {
         let mut queries = self.queries.write().await;
 
-        let state = queries.get_mut(query_id)
+        let state = queries
+            .get_mut(query_id)
             .ok_or_else(|| Error::Protocol("query not found".into()))?;
 
         if state.finalized {
             return Err(Error::Protocol("query already finalized".into()));
         }
 
-        state.responses.insert(agent_id.to_string(), response.to_string());
+        state
+            .responses
+            .insert(agent_id.to_string(), response.to_string());
 
         // Count votes for this response
         let response_hash: [u8; 32] = blake3::hash(response.as_bytes()).into();
@@ -906,7 +938,8 @@ impl AgentConsensus {
     pub async fn try_consensus(&self, query_id: &[u8; 32]) -> Result<Option<String>> {
         let mut queries = self.queries.write().await;
 
-        let state = queries.get_mut(query_id)
+        let state = queries
+            .get_mut(query_id)
             .ok_or_else(|| Error::Protocol("query not found".into()))?;
 
         if state.finalized {
@@ -962,9 +995,7 @@ impl AgentConsensus {
             .as_secs();
 
         let mut queries = self.queries.write().await;
-        queries.retain(|_, state| {
-            now - state.created_at < self.timeout_secs || state.finalized
-        });
+        queries.retain(|_, state| now - state.created_at < self.timeout_secs || state.finalized);
     }
 
     /// Get number of active queries
@@ -1050,9 +1081,18 @@ mod tests {
         let query_id = consensus.submit_query("What is 2+2?").await;
 
         // Submit responses
-        consensus.submit_response(&query_id, "agent1", "4").await.unwrap();
-        consensus.submit_response(&query_id, "agent2", "4").await.unwrap();
-        consensus.submit_response(&query_id, "agent3", "5").await.unwrap();
+        consensus
+            .submit_response(&query_id, "agent1", "4")
+            .await
+            .unwrap();
+        consensus
+            .submit_response(&query_id, "agent2", "4")
+            .await
+            .unwrap();
+        consensus
+            .submit_response(&query_id, "agent3", "5")
+            .await
+            .unwrap();
 
         // Try consensus
         let result = consensus.try_consensus(&query_id).await.unwrap();
@@ -1065,9 +1105,18 @@ mod tests {
 
         let query_id = consensus.submit_query("What color is the sky?").await;
 
-        consensus.submit_response(&query_id, "agent1", "blue").await.unwrap();
-        consensus.submit_response(&query_id, "agent2", "grey").await.unwrap();
-        consensus.submit_response(&query_id, "agent3", "white").await.unwrap();
+        consensus
+            .submit_response(&query_id, "agent1", "blue")
+            .await
+            .unwrap();
+        consensus
+            .submit_response(&query_id, "agent2", "grey")
+            .await
+            .unwrap();
+        consensus
+            .submit_response(&query_id, "agent3", "white")
+            .await
+            .unwrap();
 
         let result = consensus.try_consensus(&query_id).await.unwrap();
         assert_eq!(result, None); // No consensus at 80% threshold
@@ -1079,8 +1128,14 @@ mod tests {
 
         let query_id = consensus.submit_query("Test?").await;
 
-        consensus.submit_response(&query_id, "agent1", "yes").await.unwrap();
-        consensus.submit_response(&query_id, "agent2", "yes").await.unwrap();
+        consensus
+            .submit_response(&query_id, "agent1", "yes")
+            .await
+            .unwrap();
+        consensus
+            .submit_response(&query_id, "agent2", "yes")
+            .await
+            .unwrap();
 
         // Only 2 responses, need 3
         let result = consensus.try_consensus(&query_id).await.unwrap();

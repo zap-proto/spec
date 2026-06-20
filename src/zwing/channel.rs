@@ -150,14 +150,9 @@ mod tests {
     impl Read for DuplexStream {
         fn read(&mut self, out: &mut [u8]) -> std::io::Result<usize> {
             while self.buf.is_empty() {
-                let chunk = self
-                    .rx
-                    .lock()
-                    .unwrap()
-                    .recv()
-                    .map_err(|_| {
-                        std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "closed")
-                    })?;
+                let chunk = self.rx.lock().unwrap().recv().map_err(|_| {
+                    std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "closed")
+                })?;
                 self.buf.extend_from_slice(&chunk);
             }
             let n = std::cmp::min(out.len(), self.buf.len());

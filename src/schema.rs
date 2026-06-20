@@ -243,7 +243,12 @@ impl ZapSchema {
             if line.starts_with("struct ") {
                 let name = line[7..].trim().to_string();
                 let (fields, unions, nested, consumed) = self.parse_struct_body(&lines[i + 1..])?;
-                items.push(Item::Struct { name, fields, unions, nested });
+                items.push(Item::Struct {
+                    name,
+                    fields,
+                    unions,
+                    nested,
+                });
                 i += 1 + consumed;
                 continue;
             }
@@ -266,7 +271,12 @@ impl ZapSchema {
                     (rest.to_string(), None)
                 };
                 let (methods, nested, consumed) = self.parse_interface_body(&lines[i + 1..])?;
-                items.push(Item::Interface { name, extends, methods, nested });
+                items.push(Item::Interface {
+                    name,
+                    extends,
+                    methods,
+                    nested,
+                });
                 i += 1 + consumed;
                 continue;
             }
@@ -361,10 +371,16 @@ impl ZapSchema {
                 }
                 pos += 1; // skip {
 
-                let (fields, unions, nested, new_pos) = self.parse_capnp_struct_body(&tokens, pos)?;
+                let (fields, unions, nested, new_pos) =
+                    self.parse_capnp_struct_body(&tokens, pos)?;
                 pos = new_pos;
 
-                items.push(Item::Struct { name, fields, unions, nested });
+                items.push(Item::Struct {
+                    name,
+                    fields,
+                    unions,
+                    nested,
+                });
                 continue;
             }
 
@@ -423,7 +439,12 @@ impl ZapSchema {
                 let (methods, nested, new_pos) = self.parse_capnp_interface_body(&tokens, pos)?;
                 pos = new_pos;
 
-                items.push(Item::Interface { name, extends, methods, nested });
+                items.push(Item::Interface {
+                    name,
+                    extends,
+                    methods,
+                    nested,
+                });
                 continue;
             }
 
@@ -490,7 +511,11 @@ impl ZapSchema {
     }
 
     /// Parse Cap'n Proto struct body
-    fn parse_capnp_struct_body(&self, tokens: &[String], mut pos: usize) -> Result<(Vec<Field>, Vec<Union>, Vec<Item>, usize)> {
+    fn parse_capnp_struct_body(
+        &self,
+        tokens: &[String],
+        mut pos: usize,
+    ) -> Result<(Vec<Field>, Vec<Union>, Vec<Item>, usize)> {
         let mut fields = Vec::new();
         let mut unions = Vec::new();
         let mut nested = Vec::new();
@@ -510,9 +535,15 @@ impl ZapSchema {
                     pos += 1;
                 }
                 pos += 1;
-                let (nfields, nunions, nnested, new_pos) = self.parse_capnp_struct_body(tokens, pos)?;
+                let (nfields, nunions, nnested, new_pos) =
+                    self.parse_capnp_struct_body(tokens, pos)?;
                 pos = new_pos;
-                nested.push(Item::Struct { name, fields: nfields, unions: nunions, nested: nnested });
+                nested.push(Item::Struct {
+                    name,
+                    fields: nfields,
+                    unions: nunions,
+                    nested: nnested,
+                });
                 continue;
             }
 
@@ -550,7 +581,10 @@ impl ZapSchema {
                     }
                 }
                 pos += 1; // skip }
-                unions.push(Union { name: None, fields: union_fields });
+                unions.push(Union {
+                    name: None,
+                    fields: union_fields,
+                });
                 continue;
             }
 
@@ -571,7 +605,11 @@ impl ZapSchema {
     }
 
     /// Parse a single Cap'n Proto field
-    fn parse_capnp_field(&self, tokens: &[String], mut pos: usize) -> Result<Option<(Field, usize)>> {
+    fn parse_capnp_field(
+        &self,
+        tokens: &[String],
+        mut pos: usize,
+    ) -> Result<Option<(Field, usize)>> {
         // Field format: name @N :Type = default;
         if pos >= tokens.len() {
             return Ok(None);
@@ -632,15 +670,22 @@ impl ZapSchema {
             pos += 1;
         }
 
-        Ok(Some((Field {
-            name: name.clone(),
-            typ,
-            default,
-        }, pos)))
+        Ok(Some((
+            Field {
+                name: name.clone(),
+                typ,
+                default,
+            },
+            pos,
+        )))
     }
 
     /// Parse Cap'n Proto enum body
-    fn parse_capnp_enum_body(&self, tokens: &[String], mut pos: usize) -> Result<(Vec<String>, usize)> {
+    fn parse_capnp_enum_body(
+        &self,
+        tokens: &[String],
+        mut pos: usize,
+    ) -> Result<(Vec<String>, usize)> {
         let mut variants = Vec::new();
 
         while pos < tokens.len() && tokens[pos] != "}" {
@@ -659,7 +704,11 @@ impl ZapSchema {
     }
 
     /// Parse Cap'n Proto interface body
-    fn parse_capnp_interface_body(&self, tokens: &[String], mut pos: usize) -> Result<(Vec<Method>, Vec<Item>, usize)> {
+    fn parse_capnp_interface_body(
+        &self,
+        tokens: &[String],
+        mut pos: usize,
+    ) -> Result<(Vec<Method>, Vec<Item>, usize)> {
         let mut methods = Vec::new();
         let mut nested = Vec::new();
 
@@ -696,9 +745,15 @@ impl ZapSchema {
                     pos += 1;
                 }
                 pos += 1;
-                let (nfields, nunions, nnested, new_pos) = self.parse_capnp_struct_body(tokens, pos)?;
+                let (nfields, nunions, nnested, new_pos) =
+                    self.parse_capnp_struct_body(tokens, pos)?;
                 pos = new_pos;
-                nested.push(Item::Struct { name, fields: nfields, unions: nunions, nested: nnested });
+                nested.push(Item::Struct {
+                    name,
+                    fields: nfields,
+                    unions: nunions,
+                    nested: nnested,
+                });
                 continue;
             }
 
@@ -719,7 +774,11 @@ impl ZapSchema {
     }
 
     /// Parse a Cap'n Proto method
-    fn parse_capnp_method(&self, tokens: &[String], mut pos: usize) -> Result<Option<(Method, usize)>> {
+    fn parse_capnp_method(
+        &self,
+        tokens: &[String],
+        mut pos: usize,
+    ) -> Result<Option<(Method, usize)>> {
         if pos >= tokens.len() {
             return Ok(None);
         }
@@ -764,15 +823,22 @@ impl ZapSchema {
             pos += 1;
         }
 
-        Ok(Some((Method {
-            name: name.clone(),
-            params,
-            results,
-        }, pos)))
+        Ok(Some((
+            Method {
+                name: name.clone(),
+                params,
+                results,
+            },
+            pos,
+        )))
     }
 
     /// Parse a Cap'n Proto parameter list
-    fn parse_capnp_param_list(&self, tokens: &[String], mut pos: usize) -> Result<(Vec<Field>, usize)> {
+    fn parse_capnp_param_list(
+        &self,
+        tokens: &[String],
+        mut pos: usize,
+    ) -> Result<(Vec<Field>, usize)> {
         let mut params = Vec::new();
 
         if pos < tokens.len() && tokens[pos] == "(" {
@@ -809,7 +875,11 @@ impl ZapSchema {
                     pos += 1;
                 }
 
-                params.push(Field { name, typ, default: None });
+                params.push(Field {
+                    name,
+                    typ,
+                    default: None,
+                });
             }
         }
 
@@ -821,7 +891,10 @@ impl ZapSchema {
     }
 
     /// Parse struct body (indented fields)
-    fn parse_struct_body(&self, lines: &[&str]) -> Result<(Vec<Field>, Vec<Union>, Vec<Item>, usize)> {
+    fn parse_struct_body(
+        &self,
+        lines: &[&str],
+    ) -> Result<(Vec<Field>, Vec<Union>, Vec<Item>, usize)> {
         let mut fields = Vec::new();
         let mut unions = Vec::new();
         let mut nested = Vec::new();
@@ -851,7 +924,12 @@ impl ZapSchema {
             if trimmed.starts_with("struct ") {
                 let name = trimmed[7..].trim().to_string();
                 let (nfields, nunions, nnested, nconsumed) = self.parse_struct_body(&lines[i..])?;
-                nested.push(Item::Struct { name, fields: nfields, unions: nunions, nested: nnested });
+                nested.push(Item::Struct {
+                    name,
+                    fields: nfields,
+                    unions: nunions,
+                    nested: nnested,
+                });
                 i += nconsumed;
                 continue;
             }
@@ -878,7 +956,9 @@ impl ZapSchema {
                 while i < lines.len() {
                     let uline = lines[i];
                     if !uline.starts_with("    ") && !uline.starts_with("\t\t") {
-                        if !uline.trim().is_empty() && (uline.starts_with("  ") || uline.starts_with("\t")) {
+                        if !uline.trim().is_empty()
+                            && (uline.starts_with("  ") || uline.starts_with("\t"))
+                        {
                             break;
                         }
                     }
@@ -938,7 +1018,9 @@ impl ZapSchema {
             let name = parts[0].trim();
             let typ = parts[1].trim();
             // Avoid matching keywords as field names
-            if !typ.is_empty() && !["struct", "enum", "interface", "union", "using", "const"].contains(&name) {
+            if !typ.is_empty()
+                && !["struct", "enum", "interface", "union", "using", "const"].contains(&name)
+            {
                 return Some(Field {
                     name: name.to_string(),
                     typ: typ.to_string(),
@@ -1006,7 +1088,12 @@ impl ZapSchema {
             if trimmed.starts_with("struct ") {
                 let name = trimmed[7..].trim().to_string();
                 let (nfields, nunions, nnested, nconsumed) = self.parse_struct_body(&lines[i..])?;
-                nested.push(Item::Struct { name, fields: nfields, unions: nunions, nested: nnested });
+                nested.push(Item::Struct {
+                    name,
+                    fields: nfields,
+                    unions: nunions,
+                    nested: nnested,
+                });
                 i += nconsumed;
                 continue;
             }
@@ -1128,7 +1215,12 @@ impl ZapSchema {
             Item::Const { name, typ, value } => {
                 output.push_str(&format!("{}const {} :{} = {};\n", pad, name, typ, value));
             }
-            Item::Struct { name, fields, unions, nested } => {
+            Item::Struct {
+                name,
+                fields,
+                unions,
+                nested,
+            } => {
                 let struct_id = Self::generate_id(&format!("{}:{}", self.path, name));
                 output.push_str(&format!("{}struct {} @{:#018x} {{\n", pad, name, struct_id));
 
@@ -1184,7 +1276,12 @@ impl ZapSchema {
 
                 output.push_str(&format!("{}}}\n\n", pad));
             }
-            Item::Interface { name, extends, methods, nested } => {
+            Item::Interface {
+                name,
+                extends,
+                methods,
+                nested,
+            } => {
                 let iface_id = Self::generate_id(&format!("{}:{}", self.path, name));
                 let extends_str = extends
                     .as_ref()
@@ -1272,7 +1369,12 @@ impl ZapSchema {
             Item::Const { name, typ, value } => {
                 output.push_str(&format!("{}const {} :{} = {}\n", pad, name, typ, value));
             }
-            Item::Struct { name, fields, unions, nested } => {
+            Item::Struct {
+                name,
+                fields,
+                unions,
+                nested,
+            } => {
                 output.push_str(&format!("{}struct {}\n", pad, name));
 
                 for field in fields {
@@ -1320,7 +1422,12 @@ impl ZapSchema {
                 }
                 output.push('\n');
             }
-            Item::Interface { name, extends, methods, nested } => {
+            Item::Interface {
+                name,
+                extends,
+                methods,
+                nested,
+            } => {
                 let extends_str = extends
                     .as_ref()
                     .map(|e| format!(" extends {}", e))
@@ -1398,38 +1505,56 @@ impl ZapSchema {
             Item::Comment(text) => {
                 output.push_str(&format!("/// {}\n", text));
             }
-            Item::Struct { name, fields, unions, nested } => {
+            Item::Struct {
+                name,
+                fields,
+                unions,
+                nested,
+            } => {
                 output.push_str("#[derive(Debug, Clone, Serialize, Deserialize)]\n");
                 output.push_str(&format!("pub struct {} {{\n", name));
 
                 for field in fields {
                     let rust_type = self.zap_type_to_rust(&field.typ);
-                    output.push_str(&format!("    pub {}: {},\n",
-                        to_snake_case(&field.name), rust_type));
+                    output.push_str(&format!(
+                        "    pub {}: {},\n",
+                        to_snake_case(&field.name),
+                        rust_type
+                    ));
                 }
 
                 // Handle unions as enum fields
                 for (i, union) in unions.iter().enumerate() {
-                    let union_name = union.name.as_ref()
+                    let union_name = union
+                        .name
+                        .as_ref()
                         .cloned()
                         .unwrap_or_else(|| format!("{}Union{}", name, i));
-                    output.push_str(&format!("    pub {}: {},\n",
-                        to_snake_case(&union_name), union_name));
+                    output.push_str(&format!(
+                        "    pub {}: {},\n",
+                        to_snake_case(&union_name),
+                        union_name
+                    ));
                 }
 
                 output.push_str("}\n\n");
 
                 // Emit union enums
                 for (i, union) in unions.iter().enumerate() {
-                    let union_name = union.name.as_ref()
+                    let union_name = union
+                        .name
+                        .as_ref()
                         .cloned()
                         .unwrap_or_else(|| format!("{}Union{}", name, i));
                     output.push_str("#[derive(Debug, Clone, Serialize, Deserialize)]\n");
                     output.push_str(&format!("pub enum {} {{\n", union_name));
                     for field in &union.fields {
                         let rust_type = self.zap_type_to_rust(&field.typ);
-                        output.push_str(&format!("    {}({}),\n",
-                            to_pascal_case(&field.name), rust_type));
+                        output.push_str(&format!(
+                            "    {}({}),\n",
+                            to_pascal_case(&field.name),
+                            rust_type
+                        ));
                     }
                     output.push_str("}\n\n");
                 }
@@ -1440,20 +1565,35 @@ impl ZapSchema {
                 }
             }
             Item::Enum { name, variants } => {
-                output.push_str("#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]\n");
+                output.push_str(
+                    "#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]\n",
+                );
                 output.push_str(&format!("pub enum {} {{\n", name));
                 for variant in variants {
                     output.push_str(&format!("    {},\n", to_pascal_case(variant)));
                 }
                 output.push_str("}\n\n");
             }
-            Item::Interface { name, methods, nested, .. } => {
+            Item::Interface {
+                name,
+                methods,
+                nested,
+                ..
+            } => {
                 // Generate trait
                 output.push_str("#[async_trait::async_trait]\n");
                 output.push_str(&format!("pub trait {} {{\n", name));
                 for method in methods {
-                    let params_str = method.params.iter()
-                        .map(|p| format!("{}: {}", to_snake_case(&p.name), self.zap_type_to_rust(&p.typ)))
+                    let params_str = method
+                        .params
+                        .iter()
+                        .map(|p| {
+                            format!(
+                                "{}: {}",
+                                to_snake_case(&p.name),
+                                self.zap_type_to_rust(&p.typ)
+                            )
+                        })
                         .collect::<Vec<_>>()
                         .join(", ");
 
@@ -1462,13 +1602,16 @@ impl ZapSchema {
                     } else if method.results.len() == 1 {
                         self.zap_type_to_rust(&method.results[0].typ)
                     } else {
-                        let types: Vec<_> = method.results.iter()
+                        let types: Vec<_> = method
+                            .results
+                            .iter()
                             .map(|r| self.zap_type_to_rust(&r.typ))
                             .collect();
                         format!("({})", types.join(", "))
                     };
 
-                    output.push_str(&format!("    async fn {}(&self{}{}) -> Result<{}, ZapError>;\n",
+                    output.push_str(&format!(
+                        "    async fn {}(&self{}{}) -> Result<{}, ZapError>;\n",
                         to_snake_case(&method.name),
                         if params_str.is_empty() { "" } else { ", " },
                         params_str,
@@ -1506,10 +1649,10 @@ impl ZapSchema {
             "Float32" => "f32".to_string(),
             "Float64" => "f64".to_string(),
             t if t.starts_with("List(") && t.ends_with(")") => {
-                let inner = &t[5..t.len()-1];
+                let inner = &t[5..t.len() - 1];
                 format!("Vec<{}>", self.zap_type_to_rust(inner))
             }
-            t => t.to_string(),  // Custom types pass through
+            t => t.to_string(), // Custom types pass through
         }
     }
 }
@@ -2394,7 +2537,11 @@ enum LogLevel
             let result = transpile_str(source, "test.zap");
             assert!(result.is_ok(), "Failed on source variant {}", i);
             let output = result.unwrap();
-            assert!(output.contains("bar @0 :Text"), "Missing field in variant {}", i);
+            assert!(
+                output.contains("bar @0 :Text"),
+                "Missing field in variant {}",
+                i
+            );
         }
     }
 

@@ -43,9 +43,7 @@
 //! }
 //! ```
 
-use crate::zap_capnp::{
-    prompt_message, resource_stream, zap,
-};
+use crate::zap_capnp::{prompt_message, resource_stream, zap};
 use crate::{Config, Error, Result};
 use capnp::capability::Promise;
 use capnp_rpc::{rpc_twoparty_capnp, twoparty, RpcSystem};
@@ -134,7 +132,9 @@ pub enum PromptContent {
 /// Implement this trait to handle tool operations.
 pub trait ToolHandler: Send + Sync + 'static {
     /// List available tools
-    fn list(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<ToolDef>> + Send + '_>>;
+    fn list(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<ToolDef>> + Send + '_>>;
 
     /// Call a tool
     fn call(
@@ -142,7 +142,9 @@ pub trait ToolHandler: Send + Sync + 'static {
         name: &str,
         args: &[u8],
         metadata: HashMap<String, String>,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, String>> + Send + '_>>;
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, String>> + Send + '_>,
+    >;
 }
 
 /// Resource handler trait
@@ -150,19 +152,37 @@ pub trait ToolHandler: Send + Sync + 'static {
 /// Implement this trait to handle resource operations.
 pub trait ResourceHandler: Send + Sync + 'static {
     /// List available resources
-    fn list(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<ResourceDef>> + Send + '_>>;
+    fn list(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<ResourceDef>> + Send + '_>>;
 
     /// Read a resource
     fn read(
         &self,
         uri: &str,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<ResourceContentDef, String>> + Send + '_>>;
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<Output = std::result::Result<ResourceContentDef, String>>
+                + Send
+                + '_,
+        >,
+    >;
 
     /// Subscribe to resource updates (returns a stream receiver)
     fn subscribe(
         &self,
         uri: &str,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<tokio::sync::mpsc::Receiver<ResourceContentDef>, String>> + Send + '_>>;
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = std::result::Result<
+                        tokio::sync::mpsc::Receiver<ResourceContentDef>,
+                        String,
+                    >,
+                > + Send
+                + '_,
+        >,
+    >;
 }
 
 /// Prompt handler trait
@@ -170,14 +190,22 @@ pub trait ResourceHandler: Send + Sync + 'static {
 /// Implement this trait to handle prompt operations.
 pub trait PromptHandler: Send + Sync + 'static {
     /// List available prompts
-    fn list(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<PromptDef>> + Send + '_>>;
+    fn list(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<PromptDef>> + Send + '_>>;
 
     /// Get a prompt with arguments
     fn get(
         &self,
         name: &str,
         args: HashMap<String, String>,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<PromptMessage>, String>> + Send + '_>>;
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<Output = std::result::Result<Vec<PromptMessage>, String>>
+                + Send
+                + '_,
+        >,
+    >;
 }
 
 /// Log handler trait
@@ -198,7 +226,9 @@ pub enum LogLevel {
 pub struct NoopToolHandler;
 
 impl ToolHandler for NoopToolHandler {
-    fn list(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<ToolDef>> + Send + '_>> {
+    fn list(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<ToolDef>> + Send + '_>> {
         Box::pin(async { Vec::new() })
     }
 
@@ -207,7 +237,9 @@ impl ToolHandler for NoopToolHandler {
         _name: &str,
         _args: &[u8],
         _metadata: HashMap<String, String>,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, String>> + Send + '_>> {
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, String>> + Send + '_>,
+    > {
         Box::pin(async { Err("no tool handler registered".to_string()) })
     }
 }
@@ -216,21 +248,39 @@ impl ToolHandler for NoopToolHandler {
 pub struct NoopResourceHandler;
 
 impl ResourceHandler for NoopResourceHandler {
-    fn list(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<ResourceDef>> + Send + '_>> {
+    fn list(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<ResourceDef>> + Send + '_>> {
         Box::pin(async { Vec::new() })
     }
 
     fn read(
         &self,
         _uri: &str,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<ResourceContentDef, String>> + Send + '_>> {
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<Output = std::result::Result<ResourceContentDef, String>>
+                + Send
+                + '_,
+        >,
+    > {
         Box::pin(async { Err("no resource handler registered".to_string()) })
     }
 
     fn subscribe(
         &self,
         _uri: &str,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<tokio::sync::mpsc::Receiver<ResourceContentDef>, String>> + Send + '_>> {
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = std::result::Result<
+                        tokio::sync::mpsc::Receiver<ResourceContentDef>,
+                        String,
+                    >,
+                > + Send
+                + '_,
+        >,
+    > {
         Box::pin(async { Err("no resource handler registered".to_string()) })
     }
 }
@@ -239,7 +289,9 @@ impl ResourceHandler for NoopResourceHandler {
 pub struct NoopPromptHandler;
 
 impl PromptHandler for NoopPromptHandler {
-    fn list(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<PromptDef>> + Send + '_>> {
+    fn list(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<PromptDef>> + Send + '_>> {
         Box::pin(async { Vec::new() })
     }
 
@@ -247,7 +299,13 @@ impl PromptHandler for NoopPromptHandler {
         &self,
         _name: &str,
         _args: HashMap<String, String>,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<PromptMessage>, String>> + Send + '_>> {
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<Output = std::result::Result<Vec<PromptMessage>, String>>
+                + Send
+                + '_,
+        >,
+    > {
         Box::pin(async { Err("no prompt handler registered".to_string()) })
     }
 }
@@ -704,16 +762,14 @@ impl zap::Server for ZapImpl {
             match result {
                 Ok(receiver) => {
                     let stream_impl = ResourceStreamImpl::new(uri, receiver);
-                    let stream_client: resource_stream::Client =
-                        capnp_rpc::new_client(stream_impl);
+                    let stream_client: resource_stream::Client = capnp_rpc::new_client(stream_impl);
                     results.get().set_stream(stream_client);
                 }
                 Err(_e) => {
                     // Return an empty stream that immediately completes
                     let (_, receiver) = tokio::sync::mpsc::channel(1);
                     let stream_impl = ResourceStreamImpl::new(uri, receiver);
-                    let stream_client: resource_stream::Client =
-                        capnp_rpc::new_client(stream_impl);
+                    let stream_client: resource_stream::Client = capnp_rpc::new_client(stream_impl);
                     results.get().set_stream(stream_client);
                 }
             }

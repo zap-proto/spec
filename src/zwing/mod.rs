@@ -40,17 +40,15 @@ pub mod kem;
 #[cfg(feature = "zwing")]
 pub use channel::Channel;
 #[cfg(feature = "zwing")]
-pub use handshake::MAX_FRAME_SIZE;
-#[cfg(feature = "zwing")]
 pub use errors::{Error, Result};
+#[cfg(feature = "zwing")]
+pub use handshake::MAX_FRAME_SIZE;
 #[cfg(feature = "zwing")]
 pub use handshake::{run_initiator, run_responder, HandshakeOutput};
 #[cfg(feature = "zwing")]
 pub use identity::{Identity, IdentityPublic, IDENTITY_PUBLIC_SIZE};
 #[cfg(feature = "zwing")]
-pub use kem::{
-    xwing_decapsulate, xwing_encapsulate, XWingPrivateKey, XWingPublicKey,
-};
+pub use kem::{xwing_decapsulate, xwing_encapsulate, XWingPrivateKey, XWingPublicKey};
 
 /// ML-KEM-768 public key size in bytes.
 pub const MLKEM768_PUBLIC_KEY_SIZE: usize = 1184;

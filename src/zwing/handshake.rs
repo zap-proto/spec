@@ -273,7 +273,8 @@ impl<'a> SliceReader<'a> {
 pub(crate) fn derive_key(secret: &[u8], label: &[u8]) -> [u8; 32] {
     let hk = Hkdf::<Sha256>::new(None, secret);
     let mut out = [0u8; 32];
-    hk.expand(label, &mut out).expect("HKDF cannot fail for 32 bytes");
+    hk.expand(label, &mut out)
+        .expect("HKDF cannot fail for 32 bytes");
     out
 }
 
@@ -303,12 +304,7 @@ fn aead_seal(key: &[u8; 32], nonce_label: &[u8], aad: &[u8], plaintext: &[u8]) -
     .map_err(|_| Error::CiphertextCorrupted)
 }
 
-fn aead_open(
-    key: &[u8; 32],
-    nonce_label: &[u8],
-    aad: &[u8],
-    ciphertext: &[u8],
-) -> Result<Vec<u8>> {
+fn aead_open(key: &[u8; 32], nonce_label: &[u8], aad: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>> {
     let aead = ChaCha20Poly1305::new(Key::from_slice(key));
     let nonce = handshake_nonce(nonce_label);
     aead.decrypt(
@@ -367,12 +363,9 @@ mod tests {
     impl Read for DuplexStream {
         fn read(&mut self, out: &mut [u8]) -> std::io::Result<usize> {
             while self.buf.is_empty() {
-                let chunk = self
-                    .rx
-                    .lock()
-                    .unwrap()
-                    .recv()
-                    .map_err(|_| std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "closed"))?;
+                let chunk = self.rx.lock().unwrap().recv().map_err(|_| {
+                    std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "closed")
+                })?;
                 self.buf.extend_from_slice(&chunk);
             }
             let n = std::cmp::min(out.len(), self.buf.len());
@@ -435,7 +428,10 @@ mod tests {
     fn write_frame_oversize_rejected() {
         let mut sink = Cursor::new(Vec::new());
         let buf = vec![0u8; MAX_FRAME_SIZE + 1];
-        assert_eq!(write_frame(&mut sink, &buf).unwrap_err(), Error::MessageTooLarge);
+        assert_eq!(
+            write_frame(&mut sink, &buf).unwrap_err(),
+            Error::MessageTooLarge
+        );
     }
 
     #[test]
