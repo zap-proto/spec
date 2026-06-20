@@ -8,13 +8,13 @@
   <a href="https://crates.io/crates/zap-proto"><img src="https://img.shields.io/crates/v/zap-schema.svg" alt="crates.io"></a>
   <a href="https://www.npmjs.com/package/@zap-proto/zapc"><img src="https://img.shields.io/npm/v/@zap-proto/zapc.svg" alt="npm"></a>
   <a href="https://pypi.org/project/zap-proto/"><img src="https://img.shields.io/pypi/v/zap-schema.svg" alt="PyPI"></a>
-  <a href="https://github.com/hanzo-ai/zap/actions"><img src="https://github.com/hanzo-ai/zap/workflows/CI/badge.svg" alt="CI"></a>
+  <a href="https://github.com/zap-proto/spec/actions"><img src="https://github.com/zap-proto/spec/workflows/CI/badge.svg" alt="CI"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg" alt="License"></a>
 </p>
 
 ---
 
-ZAP is a high-performance zero-copy RPC protocol designed for AI agent communication, built by [Hanzo AI](https://hanzo.ai). It provides:
+ZAP is a high-performance zero-copy RPC protocol designed for AI agent communication. It provides:
 
 - **Clean Schema Language** - Whitespace-significant syntax that's easy to read and write
 - **Zero-copy Serialization** - Minimal overhead binary format
@@ -46,7 +46,7 @@ npx @zap-proto/zapc --help
 | Rust | `zap-proto` | `cargo add zap-proto` |
 | Python | `zap-proto` | `pip install zap-proto` |
 | TypeScript | `@zap-proto/zap` | `npm install @zap-proto/zap` |
-| Go | `github.com/hanzo-ai/zap` | `go get github.com/hanzo-ai/zap` |
+| Go | `github.com/zap-proto/go` | `go get github.com/zap-proto/go` |
 
 ## ZAP Schema Language
 
@@ -194,7 +194,7 @@ import (
     "fmt"
     "log"
 
-    "github.com/hanzo-ai/zap"
+    "github.com/zap-proto/go"
 )
 
 func main() {
@@ -526,8 +526,8 @@ let signature = identity.sign(message)?;
 
 ```bash
 # Clone
-git clone https://github.com/hanzo-ai/zap
-cd zap
+git clone https://github.com/zap-proto/spec
+cd spec
 
 # Build
 cargo build --all-features
@@ -568,10 +568,10 @@ See the [`examples/`](./examples/) directory for complete examples:
 
 ## Documentation
 
-- **[API Reference](https://zap.hanzo.ai/docs/api)** - Complete API documentation
-- **[Schema Guide](https://zap.hanzo.ai/docs/schema)** - ZAP schema language guide
-- **[Protocol Spec](https://zap.hanzo.ai/docs/protocol)** - Wire protocol specification
-- **[Security](https://zap.hanzo.ai/docs/security)** - Post-quantum crypto details
+- **[API Reference](https://zap-proto.dev/docs/api)** - Complete API documentation
+- **[Schema Guide](https://zap-proto.dev/docs/schema)** - ZAP schema language guide
+- **[Protocol Spec](https://zap-proto.dev/docs/protocol)** - Wire protocol specification
+- **[Security](https://zap-proto.dev/docs/security)** - Post-quantum crypto details
 
 ## License
 
@@ -579,9 +579,9 @@ MIT OR Apache-2.0
 
 ## Links
 
-- [GitHub](https://github.com/hanzo-ai/zap)
-- [Documentation](https://zap.hanzo.ai)
+- [GitHub](https://github.com/zap-proto/spec)
+- [Documentation](https://zap-proto.dev)
 - [npm - zapc](https://www.npmjs.com/package/@zap-proto/zapc)
 - [crates.io - zap-proto](https://crates.io/crates/zap-proto)
 - [PyPI - zap-proto](https://pypi.org/project/zap-proto/)
-- [Hanzo AI](https://hanzo.ai)
+- [zap-proto.io](https://zap-proto.io)
