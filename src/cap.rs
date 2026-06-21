@@ -32,9 +32,8 @@ use core::fmt;
 
 use ed25519_dalek::{Signer as _, Verifier as _};
 use pqcrypto_mldsa::mldsa65::{
-    detached_sign as ml_sign, keypair as ml_keypair,
-    verify_detached_signature as ml_verify, DetachedSignature as MlSig, PublicKey as MlPub,
-    SecretKey as MlSec,
+    detached_sign as ml_sign, keypair as ml_keypair, verify_detached_signature as ml_verify,
+    DetachedSignature as MlSig, PublicKey as MlPub, SecretKey as MlSec,
 };
 use pqcrypto_traits::sign::{DetachedSignature as _, PublicKey as _};
 use sha2::{Digest, Sha256};
@@ -146,7 +145,10 @@ impl fmt::Display for CapError {
             Self::UnhandledScheme => write!(f, "cap: signature scheme not handled"),
             Self::MissingSigner => write!(f, "cap: signer required"),
             Self::SchemeUnavailable(s) => {
-                write!(f, "cap: signature scheme {s:?} not available in this runtime")
+                write!(
+                    f,
+                    "cap: signature scheme {s:?} not available in this runtime"
+                )
             }
         }
     }
@@ -379,7 +381,7 @@ mod wire {
 
         let obj_start = HEADER_SIZE; // 16
         let mut buf = vec![0u8; obj_start + CAVEAT_OBJ_SIZE]; // header + fixed
-        // Kind at object offset 0.
+                                                              // Kind at object offset 0.
         buf[obj_start..obj_start + 4].copy_from_slice(&cv.kind.to_le_bytes());
 
         if cv.value.is_empty() {
@@ -452,9 +454,9 @@ mod wire {
         sig: &[u8; SIG_SIZE],
     ) -> Vec<u8> {
         let obj_start = HEADER_SIZE; // 16
-        // Reserve header + the full fixed section up front (zero-filled), so
-        // the caveat list lands strictly after every fixed field. This mirrors
-        // Go's StartObject pre-extension.
+                                     // Reserve header + the full fixed section up front (zero-filled), so
+                                     // the caveat list lands strictly after every fixed field. This mirrors
+                                     // Go's StartObject pre-extension.
         let fixed_end = obj_start + CAPABILITY_STRUCT_SIZE; // 16 + 3572 = 3588
         let mut buf = vec![0u8; fixed_end];
 
@@ -1147,7 +1149,8 @@ fn verify_ed25519(pub_key: &[u8], payload: &[u8], sig: &[u8; SIG_SIZE]) -> Resul
     let vk = ed25519_dalek::VerifyingKey::from_bytes(&pk_arr).map_err(|_| CapError::SigMismatch)?;
     let sig_arr: [u8; ED25519_SIG_LEN] = sig[..ED25519_SIG_LEN].try_into().unwrap();
     let ed_sig = ed25519_dalek::Signature::from_bytes(&sig_arr);
-    vk.verify(payload, &ed_sig).map_err(|_| CapError::SigMismatch)
+    vk.verify(payload, &ed_sig)
+        .map_err(|_| CapError::SigMismatch)
 }
 
 /// Built-in ML-DSA-65 verification (FIPS 204, pure/empty-context mode).
@@ -1161,8 +1164,7 @@ fn verify_mldsa65(pub_key: &[u8], payload: &[u8], sig: &[u8; SIG_SIZE]) -> Resul
 /// (secp256k1 / hybrid, or a custom ML-DSA path). Returning
 /// [`CapError::UnhandledScheme`] declines the tag and lets the dispatcher try
 /// its built-in path; returning anything else is final.
-pub type SchemeVerifyFn<'a> =
-    dyn Fn(Scheme, &[u8], &[u8], &[u8; SIG_SIZE]) -> Result<()> + 'a;
+pub type SchemeVerifyFn<'a> = dyn Fn(Scheme, &[u8], &[u8], &[u8; SIG_SIZE]) -> Result<()> + 'a;
 
 /// Holds the policy dependencies cap validation needs. Construct with
 /// [`Verifier::new`] (bootstrap Ed25519 + ML-DSA-65) and chain the
@@ -1239,9 +1241,7 @@ impl<'a> Verifier<'a> {
             Scheme::MlDsa65 => verify_mldsa65(pub_key, payload, sig),
             // secp256k1 / hybrid have no built-in primitive in this runtime —
             // a consumer must wire a hook. We refuse rather than downgrade.
-            Scheme::Secp256k1 | Scheme::Hybrid | Scheme::Reserved => {
-                Err(CapError::UnhandledScheme)
-            }
+            Scheme::Secp256k1 | Scheme::Hybrid | Scheme::Reserved => Err(CapError::UnhandledScheme),
         }
     }
 
@@ -1335,8 +1335,7 @@ impl<'a> Verifier<'a> {
                 return Err(CapError::ChainBroken);
             }
             // Delegation gate (SPEC §2.3 step 3d).
-            if link.permissions() & perm::ATTENUATE == 0
-                && link.kind() != CapKind::Delegate.value()
+            if link.permissions() & perm::ATTENUATE == 0 && link.kind() != CapKind::Delegate.value()
             {
                 return Err(CapError::NotDelegable);
             }
@@ -1364,7 +1363,11 @@ impl<'a> Verifier<'a> {
         if issuer_pub.is_empty() {
             return Err(CapError::IssuerUnknown);
         }
-        self.verify_sig(issuer_pub, &revocation_payload(&r.cap_id, r.revoked_at), &r.revoker_sig)
+        self.verify_sig(
+            issuer_pub,
+            &revocation_payload(&r.cap_id, r.revoked_at),
+            &r.revoker_sig,
+        )
     }
 }
 
@@ -1390,7 +1393,10 @@ impl fmt::Debug for Revocation {
         f.debug_struct("Revocation")
             .field("cap_id", &hex_short(&self.cap_id))
             .field("revoked_at", &self.revoked_at)
-            .field("scheme_tag", &format_args!("{:#x}", self.revoker_sig[ALG_TAG_OFFSET]))
+            .field(
+                "scheme_tag",
+                &format_args!("{:#x}", self.revoker_sig[ALG_TAG_OFFSET]),
+            )
             .finish()
     }
 }
@@ -1568,7 +1574,10 @@ mod tests {
         )
         .unwrap();
         let v = Verifier::new().with_issuer_key(issuer_key_for(&[&signer]));
-        assert_eq!(v.verify(&cap, 1_700_000_001).unwrap_err(), CapError::Expired);
+        assert_eq!(
+            v.verify(&cap, 1_700_000_001).unwrap_err(),
+            CapError::Expired
+        );
     }
 
     #[test]
@@ -1672,7 +1681,10 @@ mod tests {
             .attenuate(
                 child.public(),
                 0b1010_0110,
-                vec![Caveat::new(CaveatKind::MaxAmount, 100u64.to_le_bytes().to_vec())],
+                vec![Caveat::new(
+                    CaveatKind::MaxAmount,
+                    100u64.to_le_bytes().to_vec(),
+                )],
                 0,
                 &root,
             )
@@ -1793,8 +1805,15 @@ mod tests {
             .unwrap();
         let v = Verifier::new().with_issuer_key(issuer_key_for(&[&root, &mid, &leaf_s]));
         let chain = vec![mid_cap, root_cap];
-        v.verify_chain(&leaf_cap, &chain, 0x04, &target, &leaf_s.public(), 1_700_000_000)
-            .unwrap();
+        v.verify_chain(
+            &leaf_cap,
+            &chain,
+            0x04,
+            &target,
+            &leaf_s.public(),
+            1_700_000_000,
+        )
+        .unwrap();
     }
 
     #[test]
@@ -1827,7 +1846,14 @@ mod tests {
             .with_is_revoked(move |c| *c == revoked);
         let chain = vec![mid_cap, root_cap];
         let err = v
-            .verify_chain(&leaf_cap, &chain, 0x04, &target, &leaf_s.public(), 1_700_000_000)
+            .verify_chain(
+                &leaf_cap,
+                &chain,
+                0x04,
+                &target,
+                &leaf_s.public(),
+                1_700_000_000,
+            )
             .unwrap_err();
         assert_eq!(err, CapError::Revoked);
     }
@@ -1870,7 +1896,14 @@ mod tests {
         let v = Verifier::new().with_issuer_key(issuer_key_for(&[&root, &mid, &leaf_s, &other]));
         let chain = vec![bogus, root_cap];
         let err = v
-            .verify_chain(&leaf_cap, &chain, 0x04, &target, &leaf_s.public(), 1_700_000_000)
+            .verify_chain(
+                &leaf_cap,
+                &chain,
+                0x04,
+                &target,
+                &leaf_s.public(),
+                1_700_000_000,
+            )
             .unwrap_err();
         assert_eq!(err, CapError::ChainBroken);
     }
@@ -1966,7 +1999,14 @@ mod tests {
         let v = Verifier::new().with_issuer_key(issuer_key_for(&[&root, &mid]));
         let chain = vec![root_cap];
         let err = v
-            .verify_chain(&mid_cap, &chain, 0x01, &target, &mid.public(), 1_700_000_000)
+            .verify_chain(
+                &mid_cap,
+                &chain,
+                0x01,
+                &target,
+                &mid.public(),
+                1_700_000_000,
+            )
             .unwrap_err();
         assert_eq!(err, CapError::NotDelegable);
     }
@@ -2098,7 +2138,10 @@ mod tests {
                 kind: CapKind::KmsSign.value(),
                 permissions: perm::ATTENUATE | 0x07,
                 expires_at: 2_000_000_000,
-                caveats: vec![Caveat::new(CaveatKind::MaxAmount, 42u64.to_le_bytes().to_vec())],
+                caveats: vec![Caveat::new(
+                    CaveatKind::MaxAmount,
+                    42u64.to_le_bytes().to_vec(),
+                )],
                 ..Default::default()
             },
             &signer,
@@ -2115,7 +2158,10 @@ mod tests {
         let tc = Capability::parse(&raw).unwrap();
         let pubkey2 = signer.public_key();
         let v2 = Verifier::new().with_issuer_key(move |_| Ok(pubkey2.clone()));
-        assert_eq!(v2.verify(&tc, 1_700_000_000).unwrap_err(), CapError::SigMismatch);
+        assert_eq!(
+            v2.verify(&tc, 1_700_000_000).unwrap_err(),
+            CapError::SigMismatch
+        );
     }
 
     #[test]
@@ -2126,7 +2172,10 @@ mod tests {
             *b = i as u8;
         }
         let cases = vec![
-            Caveat::new(CaveatKind::ExpiresAt, 2_000_000_000u64.to_le_bytes().to_vec()),
+            Caveat::new(
+                CaveatKind::ExpiresAt,
+                2_000_000_000u64.to_le_bytes().to_vec(),
+            ),
             Caveat::new(CaveatKind::MaxAmount, 42u64.to_le_bytes().to_vec()),
             Caveat::new(CaveatKind::DestChain, id.to_vec()),
             Caveat::new(CaveatKind::RateLimit, {

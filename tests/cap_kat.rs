@@ -18,7 +18,7 @@
 
 use std::collections::HashMap;
 
-use zap::cap::{hash32, Capability, CapError, Verifier};
+use zap::cap::{hash32, CapError, Capability, Verifier};
 
 const FIXTURE: &str = include_str!("testdata/cap_go_kat.hex");
 
@@ -30,7 +30,9 @@ fn parse_fixture() -> HashMap<String, Vec<u8>> {
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
-        let (key, val) = line.split_once('=').expect("fixture line must be key=value");
+        let (key, val) = line
+            .split_once('=')
+            .expect("fixture line must be key=value");
         let bytes = hex::decode(val.trim()).expect("fixture value must be hex");
         map.insert(key.to_string(), bytes);
     }
@@ -38,7 +40,8 @@ fn parse_fixture() -> HashMap<String, Vec<u8>> {
 }
 
 fn get<'a>(m: &'a HashMap<String, Vec<u8>>, k: &str) -> &'a [u8] {
-    m.get(k).unwrap_or_else(|| panic!("missing fixture key {k}"))
+    m.get(k)
+        .unwrap_or_else(|| panic!("missing fixture key {k}"))
 }
 
 /// Run the full KAT for one labelled case in the fixture.
