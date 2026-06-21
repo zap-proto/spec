@@ -296,7 +296,7 @@ mod tests {
 
     fn make_did(name: &str) -> Did {
         Did {
-            method: DidMethod::Lux,
+            method: DidMethod::Zap,
             id: format!("z6Mk{}", name),
         }
     }

@@ -2,7 +2,7 @@
 W3C Decentralized Identifier (DID) Implementation
 
 Implements W3C DID Core 1.0 specification with support for:
-- did:lux - Lux blockchain-anchored DIDs
+- did:zap - ZAP-native, blockchain-anchored DIDs
 - did:key - Self-certifying DIDs from cryptographic keys
 - did:web - DNS-based DIDs
 
@@ -10,9 +10,9 @@ Example:
     >>> from zap_schema.identity import Did, DidMethod, NodeIdentity
 
     # Parse existing DID
-    >>> did = parse_did("did:lux:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK")
+    >>> did = parse_did("did:zap:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK")
     >>> did.method
-    <DidMethod.LUX: 'lux'>
+    <DidMethod.ZAP: 'zap'>
 
     # Create from ML-DSA public key
     >>> did = create_did_from_key(public_key_bytes)
@@ -91,7 +91,7 @@ def base58_decode(s: str) -> bytes:
 
 class DidMethod(Enum):
     """DID method identifier."""
-    LUX = "lux"
+    ZAP = "zap"
     KEY = "key"
     WEB = "web"
 
@@ -303,7 +303,7 @@ class Did:
         return hash((self.method, self.id))
 
     def extract_key_material(self) -> bytes:
-        """Extract raw key material from did:key or did:lux identifier."""
+        """Extract raw key material from did:key or did:zap identifier."""
         if not self.id:
             raise IdentityError("empty DID identifier")
 
@@ -333,11 +333,11 @@ class Did:
         did_uri = self.uri()
 
         # Create verification method based on DID type
-        if self.method in (DidMethod.KEY, DidMethod.LUX):
+        if self.method in (DidMethod.KEY, DidMethod.ZAP):
             key_material = self.extract_key_material()
             blockchain_account_id = None
-            if self.method == DidMethod.LUX:
-                blockchain_account_id = f"lux:{key_material[:20].hex()}"
+            if self.method == DidMethod.ZAP:
+                blockchain_account_id = f"zap:{key_material[:20].hex()}"
 
             verification_method = VerificationMethod(
                 id=f"{did_uri}#keys-1",
@@ -384,9 +384,9 @@ def parse_did(s: str) -> Did:
         IdentityError: If the DID string is invalid
 
     Example:
-        >>> did = parse_did("did:lux:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK")
+        >>> did = parse_did("did:zap:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK")
         >>> did.method
-        <DidMethod.LUX: 'lux'>
+        <DidMethod.ZAP: 'zap'>
     """
     if not s.startswith("did:"):
         raise IdentityError(f"invalid DID: must start with 'did:', got '{s}'")
@@ -416,7 +416,7 @@ def create_did_from_key(public_key: bytes, method: DidMethod = DidMethod.KEY) ->
 
     Args:
         public_key: ML-DSA-65 public key bytes (1952 bytes)
-        method: DID method to use (KEY or LUX)
+        method: DID method to use (KEY or ZAP)
 
     Returns:
         New Did object
@@ -578,12 +578,12 @@ class NodeIdentity:
         return self
 
 
-def generate_identity(method: DidMethod = DidMethod.LUX) -> NodeIdentity:
+def generate_identity(method: DidMethod = DidMethod.ZAP) -> NodeIdentity:
     """
     Generate a new node identity with fresh ML-DSA-65 keypair.
 
     Args:
-        method: DID method to use (default: LUX)
+        method: DID method to use (default: ZAP)
 
     Returns:
         New NodeIdentity with signing capability
@@ -593,7 +593,7 @@ def generate_identity(method: DidMethod = DidMethod.LUX) -> NodeIdentity:
 
     Example:
         >>> identity = generate_identity()
-        >>> print(identity.did)  # did:lux:z6Mk...
+        >>> print(identity.did)  # did:zap:z6Mk...
         >>> identity.can_sign()
         True
     """

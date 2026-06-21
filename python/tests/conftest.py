@@ -7,7 +7,7 @@ import pytest
 def sample_did():
     """Create a sample DID for testing."""
     from zap_schema.identity import Did
-    return Did(method="lux", id="z6MkTest123")
+    return Did(method="zap", id="z6MkTest123")
 
 
 @pytest.fixture
