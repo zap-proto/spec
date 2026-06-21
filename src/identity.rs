@@ -1,7 +1,7 @@
 //! W3C Decentralized Identifier (DID) Implementation
 //!
 //! Implements W3C DID Core 1.0 specification with support for:
-//! - did:lux - Lux blockchain-anchored DIDs
+//! - did:zap - ZAP-native, blockchain-anchored DIDs
 //! - did:key - Self-certifying DIDs from cryptographic keys
 //! - did:web - DNS-based DIDs
 //!
@@ -11,7 +11,7 @@
 //! use zap::identity::{Did, DidMethod, NodeIdentity};
 //!
 //! // Parse existing DID
-//! let did = Did::parse("did:lux:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK")?;
+//! let did = Did::parse("did:zap:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK")?;
 //!
 //! // Create from ML-DSA public key
 //! let did = Did::from_mldsa_key(&public_key_bytes)?;
@@ -41,8 +41,8 @@ const MULTICODEC_MLDSA65: [u8; 2] = [0x13, 0x09];
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum DidMethod {
-    /// Lux blockchain-anchored DID
-    Lux,
+    /// ZAP-native, blockchain-anchored DID
+    Zap,
     /// Self-certifying DID from cryptographic key
     Key,
     /// DNS-based DID
@@ -53,7 +53,7 @@ impl DidMethod {
     /// Get the method string for DID URI
     pub fn as_str(&self) -> &'static str {
         match self {
-            DidMethod::Lux => "lux",
+            DidMethod::Zap => "zap",
             DidMethod::Key => "key",
             DidMethod::Web => "web",
         }
@@ -62,7 +62,7 @@ impl DidMethod {
     /// Parse method from string
     pub fn from_str(s: &str) -> Result<Self> {
         match s {
-            "lux" => Ok(DidMethod::Lux),
+            "zap" => Ok(DidMethod::Zap),
             "key" => Ok(DidMethod::Key),
             "web" => Ok(DidMethod::Web),
             _ => Err(Error::Identity(format!("unknown DID method: {}", s))),
@@ -82,7 +82,7 @@ impl fmt::Display for DidMethod {
 /// decentralized digital identity.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Did {
-    /// The DID method (lux, key, web)
+    /// The DID method (zap, key, web)
     pub method: DidMethod,
     /// The method-specific identifier
     pub id: String,
@@ -99,8 +99,8 @@ impl Did {
     /// # Example
     ///
     /// ```rust,ignore
-    /// let did = Did::parse("did:lux:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK")?;
-    /// assert_eq!(did.method, DidMethod::Lux);
+    /// let did = Did::parse("did:zap:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK")?;
+    /// assert_eq!(did.method, DidMethod::Zap);
     /// ```
     pub fn parse(s: &str) -> Result<Self> {
         // DID syntax: did:method:method-specific-id
@@ -172,11 +172,11 @@ impl Did {
         })
     }
 
-    /// Create a Lux blockchain-anchored DID from an ML-DSA public key
-    pub fn from_mldsa_key_lux(public_key: &[u8]) -> Result<Self> {
+    /// Create a ZAP-native, blockchain-anchored DID from an ML-DSA public key
+    pub fn from_mldsa_key_zap(public_key: &[u8]) -> Result<Self> {
         let key_did = Self::from_mldsa_key(public_key)?;
         Ok(Self {
-            method: DidMethod::Lux,
+            method: DidMethod::Zap,
             id: key_did.id,
         })
     }
@@ -230,7 +230,7 @@ impl Did {
 
         // Create verification method based on DID type
         let verification_method = match self.method {
-            DidMethod::Key | DidMethod::Lux => {
+            DidMethod::Key | DidMethod::Zap => {
                 // Extract public key from multibase-encoded identifier
                 let key_material = self.extract_key_material()?;
                 VerificationMethod {
@@ -239,8 +239,8 @@ impl Did {
                     controller: did_uri.clone(),
                     public_key_multibase: Some(self.id.clone()),
                     public_key_jwk: None,
-                    blockchain_account_id: if self.method == DidMethod::Lux {
-                        Some(format!("lux:{}", hex::encode(&key_material[..20])))
+                    blockchain_account_id: if self.method == DidMethod::Zap {
+                        Some(format!("zap:{}", hex::encode(&key_material[..20])))
                     } else {
                         None
                     },
@@ -280,7 +280,7 @@ impl Did {
         })
     }
 
-    /// Extract the raw key material from a did:key or did:lux identifier
+    /// Extract the raw key material from a did:key or did:zap identifier
     fn extract_key_material(&self) -> Result<Vec<u8>> {
         if self.id.is_empty() {
             return Err(Error::Identity("empty DID identifier".to_string()));
@@ -439,7 +439,7 @@ pub struct VerificationMethod {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub public_key_jwk: Option<serde_json::Value>,
 
-    /// Blockchain account ID (for Lux DIDs)
+    /// Blockchain account ID (for did:zap DIDs)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub blockchain_account_id: Option<String>,
 }
@@ -537,7 +537,7 @@ impl NodeIdentity {
     pub fn generate() -> Result<Self> {
         let signer = PQSignature::generate()?;
         let public_key = signer.public_key_bytes();
-        let did = Did::from_mldsa_key_lux(&public_key)?;
+        let did = Did::from_mldsa_key_zap(&public_key)?;
 
         Ok(Self {
             did,
@@ -692,9 +692,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_did_parse_lux() {
-        let did = Did::parse("did:lux:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK").unwrap();
-        assert_eq!(did.method, DidMethod::Lux);
+    fn test_did_parse_zap() {
+        let did = Did::parse("did:zap:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK").unwrap();
+        assert_eq!(did.method, DidMethod::Zap);
         assert_eq!(did.id, "z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK");
     }
 
@@ -715,7 +715,7 @@ mod tests {
     fn test_did_parse_invalid() {
         assert!(Did::parse("not-a-did").is_err());
         assert!(Did::parse("did:unknown:abc").is_err());
-        assert!(Did::parse("did:lux:").is_err());
+        assert!(Did::parse("did:zap:").is_err());
     }
 
     #[test]
@@ -729,7 +729,7 @@ mod tests {
 
     #[test]
     fn test_did_method_display() {
-        assert_eq!(DidMethod::Lux.to_string(), "lux");
+        assert_eq!(DidMethod::Zap.to_string(), "zap");
         assert_eq!(DidMethod::Key.to_string(), "key");
         assert_eq!(DidMethod::Web.to_string(), "web");
     }
@@ -766,7 +766,7 @@ mod tests {
     #[test]
     fn test_stake_registry() {
         let mut registry = InMemoryStakeRegistry::new();
-        let did = Did::parse("did:lux:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK").unwrap();
+        let did = Did::parse("did:zap:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK").unwrap();
 
         assert_eq!(registry.get_stake(&did).unwrap(), 0);
 
@@ -782,8 +782,8 @@ mod tests {
     #[test]
     fn test_stake_weight() {
         let mut registry = InMemoryStakeRegistry::new();
-        let did1 = Did::parse("did:lux:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK").unwrap();
-        let did2 = Did::parse("did:lux:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doL").unwrap();
+        let did1 = Did::parse("did:zap:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK").unwrap();
+        let did2 = Did::parse("did:zap:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doL").unwrap();
 
         registry.set_stake(&did1, 750).unwrap();
         registry.set_stake(&did2, 250).unwrap();
@@ -797,7 +797,7 @@ mod tests {
 
     #[test]
     fn test_node_identity_new() {
-        let did = Did::parse("did:lux:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK").unwrap();
+        let did = Did::parse("did:zap:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK").unwrap();
         let identity = NodeIdentity::new(did.clone(), vec![0u8; 1952]);
 
         assert_eq!(identity.did, did);
@@ -807,13 +807,13 @@ mod tests {
 
     #[test]
     fn test_node_identity_with_stake() {
-        let did = Did::parse("did:lux:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK").unwrap();
+        let did = Did::parse("did:zap:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK").unwrap();
         let identity = NodeIdentity::new(did, vec![0u8; 1952])
             .with_stake(5000)
-            .with_registry("lux:mainnet".to_string());
+            .with_registry("zap:mainnet".to_string());
 
         assert_eq!(identity.stake, Some(5000));
-        assert_eq!(identity.stake_registry, Some("lux:mainnet".to_string()));
+        assert_eq!(identity.stake_registry, Some("zap:mainnet".to_string()));
     }
 
     #[cfg(feature = "pq")]
@@ -822,7 +822,7 @@ mod tests {
         let identity = NodeIdentity::generate().unwrap();
 
         assert!(identity.can_sign());
-        assert_eq!(identity.did.method, DidMethod::Lux);
+        assert_eq!(identity.did.method, DidMethod::Zap);
         assert!(!identity.public_key.is_empty());
 
         // Test signing

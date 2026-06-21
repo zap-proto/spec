@@ -13,7 +13,7 @@ from zap_schema.agent_consensus import (
 
 def make_did(name: str) -> Did:
     """Create a test DID."""
-    return Did(method=DidMethod.LUX, id=f"z6Mk{name}")
+    return Did(method=DidMethod.ZAP, id=f"z6Mk{name}")
 
 
 class TestQuery:

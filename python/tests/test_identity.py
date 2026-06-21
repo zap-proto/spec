@@ -37,9 +37,9 @@ class TestDid:
     """Tests for Did class."""
 
     def test_create_lux_did(self):
-        """Test creating a did:lux DID."""
-        did = Did(method=DidMethod.LUX, id="z6MkTest123")
-        assert did.method == DidMethod.LUX
+        """Test creating a did:zap DID."""
+        did = Did(method=DidMethod.ZAP, id="z6MkTest123")
+        assert did.method == DidMethod.ZAP
         assert did.id == "z6MkTest123"
 
     def test_create_key_did(self):
@@ -56,14 +56,14 @@ class TestDid:
 
     def test_did_uri(self):
         """Test DID URI formatting."""
-        did = Did(method=DidMethod.LUX, id="z6MkTest123")
-        assert did.uri() == "did:lux:z6MkTest123"
+        did = Did(method=DidMethod.ZAP, id="z6MkTest123")
+        assert did.uri() == "did:zap:z6MkTest123"
 
     def test_did_equality(self):
         """Test DID equality comparison."""
-        did1 = Did(method=DidMethod.LUX, id="z6MkTest123")
-        did2 = Did(method=DidMethod.LUX, id="z6MkTest123")
-        did3 = Did(method=DidMethod.LUX, id="z6MkDifferent")
+        did1 = Did(method=DidMethod.ZAP, id="z6MkTest123")
+        did2 = Did(method=DidMethod.ZAP, id="z6MkTest123")
+        did3 = Did(method=DidMethod.ZAP, id="z6MkDifferent")
         assert did1.uri() == did2.uri()
         assert did1.uri() != did3.uri()
 
@@ -72,9 +72,9 @@ class TestParseDid:
     """Tests for parse_did function."""
 
     def test_parse_lux_did(self):
-        """Test parsing did:lux DID."""
-        did = parse_did("did:lux:z6MkTest123")
-        assert did.method == DidMethod.LUX
+        """Test parsing did:zap DID."""
+        did = parse_did("did:zap:z6MkTest123")
+        assert did.method == DidMethod.ZAP
         assert did.id == "z6MkTest123"
 
     def test_parse_key_did(self):
@@ -105,16 +105,16 @@ class TestDidDocument:
 
     def test_create_did_document(self):
         """Test creating a DID document."""
-        did = Did(method=DidMethod.LUX, id="z6MkTest123")
+        did = Did(method=DidMethod.ZAP, id="z6MkTest123")
         doc = did.document()
-        assert doc.id == "did:lux:z6MkTest123"
+        assert doc.id == "did:zap:z6MkTest123"
 
     def test_did_document_to_json(self):
         """Test converting DID document to JSON."""
-        did = Did(method=DidMethod.LUX, id="z6MkTest123")
+        did = Did(method=DidMethod.ZAP, id="z6MkTest123")
         doc = did.document()
         json_str = doc.to_json()
-        assert '"id": "did:lux:z6MkTest123"' in json_str or '"id":"did:lux:z6MkTest123"' in json_str
+        assert '"id": "did:zap:z6MkTest123"' in json_str or '"id":"did:zap:z6MkTest123"' in json_str
 
 
 class TestBase58:
@@ -204,8 +204,8 @@ class TestParseDidExtra:
         assert str(Did(method=DidMethod.KEY, id="z6MkAbc")) == "did:key:z6MkAbc"
 
     def test_did_hashable(self):
-        a = Did(method=DidMethod.LUX, id="z6MkAbc")
-        b = Did(method=DidMethod.LUX, id="z6MkAbc")
+        a = Did(method=DidMethod.ZAP, id="z6MkAbc")
+        b = Did(method=DidMethod.ZAP, id="z6MkAbc")
         assert {a, b} == {a}
 
 
@@ -235,12 +235,12 @@ class TestKeyMaterial:
         assert vm.blockchain_account_id is None
 
     def test_lux_document_has_blockchain_account_id(self):
-        did = create_did_from_key(_real_public_key(), method=DidMethod.LUX)
+        did = create_did_from_key(_real_public_key(), method=DidMethod.ZAP)
         doc = did.document()
         vm = doc.primary_verification_method()
         assert vm is not None
         assert vm.blockchain_account_id is not None
-        assert vm.blockchain_account_id.startswith("lux:")
+        assert vm.blockchain_account_id.startswith("zap:")
 
     def test_web_document_has_no_key_material(self):
         doc = create_did_from_web("example.com").document()
@@ -313,12 +313,12 @@ class TestServiceAndVerificationMethodDicts:
             controller="did:key:z",
             public_key_multibase="z6Mk",
             public_key_jwk={"kty": "OKP"},
-            blockchain_account_id="lux:deadbeef",
+            blockchain_account_id="zap:deadbeef",
         )
         d = vm.to_dict()
         assert d["publicKeyMultibase"] == "z6Mk"
         assert d["publicKeyJwk"] == {"kty": "OKP"}
-        assert d["blockchainAccountId"] == "lux:deadbeef"
+        assert d["blockchainAccountId"] == "zap:deadbeef"
 
     def test_service_to_dict(self):
         svc = Service(
@@ -349,8 +349,8 @@ class TestStakeRegistry:
 
     def test_set_get_and_weight(self):
         reg = InMemoryStakeRegistry()
-        a = Did(method=DidMethod.LUX, id="z6MkA")
-        b = Did(method=DidMethod.LUX, id="z6MkB")
+        a = Did(method=DidMethod.ZAP, id="z6MkA")
+        b = Did(method=DidMethod.ZAP, id="z6MkB")
         assert reg.get_stake(a) == 0
         assert reg.stake_weight(a) == 0.0  # empty registry
         reg.set_stake(a, 75)
@@ -368,7 +368,7 @@ class TestNodeIdentity:
     def test_generate_can_sign(self):
         identity = generate_identity()
         assert identity.can_sign() is True
-        assert identity.did.method == DidMethod.LUX
+        assert identity.did.method == DidMethod.ZAP
         assert len(identity.public_key) == 1952
 
     def test_generate_key_method(self):
