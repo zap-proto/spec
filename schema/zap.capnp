@@ -4,7 +4,7 @@
 
 using Go = import "/go.capnp";
 $Go.package("zap");
-$Go.import("github.com/zap-protocol/zap-go");
+$Go.import("github.com/zap-proto/go");
 
 # Core types
 

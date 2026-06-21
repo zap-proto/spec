@@ -13,6 +13,25 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Publish ownership (one canonical publisher per package name — no dual-publish):
+#
+#   npm  @zap-proto/zapc   -> OWNED BY zap-proto/rust (npm/, tag `zapc-v*`).
+#        That is the binary-downloader live at 1.0.0 and what `npx @zap-proto/zapc`
+#        runs. This repo must NOT publish @zap-proto/zapc — the former
+#        `npm-packages` job (optionalDependencies + 5 @zap-proto/zapc-<plat>
+#        packages) was removed to stop the name collision. The matching dead
+#        `npm/` directory was deleted in the same commit.
+#
+#   PyPI zap-proto          -> OWNED BY zap-proto/py (live 1.2.0). This repo must
+#        NOT publish zap-proto — the `reserve/zap-proto-py` publish step was
+#        removed so a future spec bump can never clobber py/'s real package.
+#
+# This repo (zap-proto/spec) remains the sole publisher of its OWN names only:
+#   crates.io zap-schema  +  PyPI zap-schema  (the schema-compiler package).
+# `zap-proto` / `zap-protocol` registry names are held as static reservations
+# (the reserve/ dirs); they are intentionally NOT auto-published from here.
+# ─────────────────────────────────────────────────────────────────────────────
 jobs:
   build:
     name: Build ${{ matrix.target }}
@@ -82,109 +101,9 @@ jobs:
           name: zapc-${{ matrix.platform }}
           path: dist/zapc-${{ matrix.platform }}${{ matrix.ext }}
 
-  # Create npm platform packages
-  npm-packages:
-    name: Create npm packages
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Get version
-        id: version
-        run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create platform packages
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-
-          # Function to create platform package
-          create_package() {
-            local platform=$1
-            local binary=$2
-
-            mkdir -p "npm-packages/@zap-proto/zapc-${platform}/bin"
-
-            cat > "npm-packages/@zap-proto/zapc-${platform}/package.json" << EOF
-          {
-            "name": "@zap-proto/zapc-${platform}",
-            "version": "${VERSION}",
-            "description": "ZAP Schema Compiler binary for ${platform}",
-            "license": "Apache-2.0",
-            "repository": {
-              "type": "git",
-              "url": "git+https://github.com/zap-proto/zap.git"
-            },
-            "os": ["$(echo $platform | cut -d- -f1)"],
-            "cpu": ["$(echo $platform | cut -d- -f2)"],
-            "files": ["bin"]
-          }
-          EOF
-
-            cp "artifacts/zapc-${platform}/${binary}" "npm-packages/@zap-proto/zapc-${platform}/bin/"
-            chmod +x "npm-packages/@zap-proto/zapc-${platform}/bin/${binary}"
-          }
-
-          create_package "darwin-arm64" "zapc-darwin-arm64"
-          create_package "darwin-x64" "zapc-darwin-x64"
-          create_package "linux-arm64" "zapc-linux-arm64"
-          create_package "linux-x64" "zapc-linux-x64"
-          create_package "win32-x64" "zapc-win32-x64.exe"
-
-          # Rename binaries to just 'zapc' (or 'zapc.exe')
-          for pkg in npm-packages/@zap-proto/zapc-*/bin/*; do
-            dir=$(dirname "$pkg")
-            if [[ "$pkg" == *.exe ]]; then
-              mv "$pkg" "$dir/zapc.exe"
-            else
-              mv "$pkg" "$dir/zapc"
-            fi
-          done
-
-      - name: Update main package version
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          cd npm
-          node -e "
-            const pkg = require('./package.json');
-            pkg.version = '${VERSION}';
-            for (const dep of Object.keys(pkg.optionalDependencies || {})) {
-              pkg.optionalDependencies[dep] = '${VERSION}';
-            }
-            require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-          "
-
-      - name: Publish platform packages
-        run: |
-          for pkg in npm-packages/@zap-proto/zapc-*; do
-            cd "$pkg"
-            npm publish --access public || true
-            cd -
-          done
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish main package
-        run: |
-          cd npm
-          npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+  # NOTE: the npm publish job was intentionally REMOVED. `@zap-proto/zapc`
+  # (and its 5 platform sub-packages) is published exclusively from
+  # zap-proto/rust (npm/, tag `zapc-v*`). See the ownership banner above.
 
   # Create GitHub release
   release:
@@ -297,12 +216,10 @@ jobs:
             echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Update version in pyproject.toml files
+      - name: Update version in pyproject.toml
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           sed -i "s/version = \".*\"/version = \"${VERSION}\"/" python/pyproject.toml
-          sed -i "s/version = \".*\"/version = \"${VERSION}\"/" reserve/zap-proto-py/pyproject.toml
-          sed -i "s/version = \".*\"/version = \"${VERSION}\"/" reserve/zap-protocol-py/pyproject.toml
 
       - name: Build and publish zap-schema
         working-directory: python
@@ -311,16 +228,8 @@ jobs:
           uv publish --token ${{ secrets.PYPI_TOKEN }}
         continue-on-error: true
 
-      - name: Build and publish zap-proto
-        working-directory: reserve/zap-proto-py
-        run: |
-          uv build
-          uv publish --token ${{ secrets.PYPI_TOKEN }}
-        continue-on-error: true
-
-      - name: Build and publish zap-protocol
-        working-directory: reserve/zap-protocol-py
-        run: |
-          uv build
-          uv publish --token ${{ secrets.PYPI_TOKEN }}
-        continue-on-error: true
+      # NOTE: the `zap-proto` PyPI publish step was intentionally REMOVED.
+      # PyPI `zap-proto` is published exclusively from zap-proto/py (live 1.2.0).
+      # Auto-publishing it from here risked a future spec bump clobbering py/'s
+      # real package. The `zap-protocol` PyPI step was likewise removed — that
+      # name is held as a static reservation, not auto-published. See banner.
