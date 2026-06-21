@@ -7,7 +7,7 @@ Implements W3C DID Core 1.0 specification with support for:
 - did:web - DNS-based DIDs
 
 Example:
-    >>> from hanzo_zap.identity import Did, DidMethod, NodeIdentity
+    >>> from zap_schema.identity import Did, DidMethod, NodeIdentity
 
     # Parse existing DID
     >>> did = parse_did("did:lux:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK")

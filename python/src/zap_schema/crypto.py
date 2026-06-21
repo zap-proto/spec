@@ -9,7 +9,7 @@ Security:
     classical X25519 with ML-KEM-768 for defense-in-depth.
 
 Example:
-    >>> from hanzo_zap.crypto import PQKeyExchange, PQSignature, HybridHandshake
+    >>> from zap_schema.crypto import PQKeyExchange, PQSignature, HybridHandshake
 
     # Key exchange
     >>> alice = PQKeyExchange.generate()
