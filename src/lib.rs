@@ -30,6 +30,7 @@ pub mod zap_capnp {
 }
 
 pub mod agent_consensus;
+pub mod cap;
 pub mod client;
 pub mod config;
 pub mod consensus;
@@ -44,6 +45,14 @@ pub mod zwing;
 
 pub use agent_consensus::{
     AgentConsensusVoting, ConsensusResult, Query, QueryId, Response, ResponseId,
+};
+// ZAP capability runtime (delegation tokens). `cap::Result` is intentionally
+// NOT re-exported to avoid colliding with `error::Result`; reach it as
+// `zap::cap::Result` where needed.
+pub use cap::{
+    issue as cap_issue, revoke as cap_revoke, verify_revocation as cap_verify_revocation,
+    Capability, CapError, CapKind, Caveat, CaveatKind, Ed25519Signer, Issuance, MlDsa65Signer,
+    Revocation, Scheme, Signer, Verifier,
 };
 pub use client::Client;
 pub use config::Config;
