@@ -172,7 +172,9 @@ jobs:
   crates:
     name: Publish to crates.io
     runs-on: ubuntu-latest
-    needs: build
+    # Decoupled from the cross-platform binary `build` matrix: `cargo publish`
+    # does its own native verify-build (green in ci.yml), so the crates.io
+    # release does not depend on the GitHub-Release zapc binaries.
     steps:
       - uses: actions/checkout@v4
 
