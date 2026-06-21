@@ -520,6 +520,52 @@ let did = Did::from_mldsa_key(&identity.public_key)?;
 let signature = identity.sign(message)?;
 ```
 
+### Capabilities
+
+The `zap::cap` module is the capability runtime — signed, attenuable tokens of
+authority. A `Capability` grants a holder a `permissions` bitmask over a
+`target`, issued by an `issuer`; caps chain via `parent`, and
+`Verifier::verify_chain` walks back to a root checking each signature, expiry,
+revocation, target invariance, and monotonically-narrowing permissions.
+
+```rust
+use zap::cap::{issue, perm, Issuance, Verifier, Ed25519Signer, CapKind};
+
+let signer = Ed25519Signer::generate();
+let root = issue(
+    Issuance {
+        kind: CapKind::IamSession.value(),
+        permissions: perm::ATTENUATE,    // may exercise *and* delegate
+        expires_at: 2_000_000_000,
+        ..Default::default()
+    },
+    &signer,
+)?;
+// Narrower child: attenuate is a method on the parent Capability; permissions
+// intersect, expiry only shrinks, parent must carry perm::ATTENUATE or be Delegate.
+let child = root.attenuate(child_holder, perm::AUDIT, vec![], 0, &signer)?;
+```
+
+`issue` / `Capability::attenuate` enforce the SPEC §2.3 delegation gate at mint
+time; `Verifier::verify` / `verify_chain` enforce the full invariants with
+**fail-closed** scheme dispatch (the reserved tag `0x00` and any unimplemented
+tag are refused, never downgraded). `cap.cap_id()` is `SHA-256(canonical_bytes ‖
+Sig)` and `cap.canonical_bytes()` is the SPEC §3 signed scope — both
+byte-identical to the Go, Python, and TypeScript runtimes (pinned by a shared
+known-answer test). Ed25519 and ML-DSA-65 (FIPS 204) are built in; secp256k1 and
+hybrid are wired via a scheme-verify hook. The capability layer ships in all four
+reference runtimes (Go, Python, Rust, TypeScript). The crate name is `zap-schema`;
+its library name is `zap`, so `use zap::cap::…` after `zap-schema = "1"`.
+
+### Promise pipelining
+
+`zap-rpc` is a Level-1 capability RPC: the result of one call can be used as the
+input of another before the first result returns, collapsing a dependent
+two-round-trip exchange into one. `zap-rpc` implements the richer Cap'n-Proto
+`PromisedAnswer` (transform-path) model — a superset of the Target-based model
+shared byte-for-byte by the Go, Python, and TypeScript runtimes, interoperating
+with them at the envelope level for non-pipelined calls.
+
 ## Development
 
 ### Rust
