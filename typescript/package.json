@@ -44,15 +44,15 @@
     "url": "https://github.com/hanzoai/zap/issues"
   },
   "dependencies": {
-    "capnp-ts": "^0.7.0"
+    "capnp-ts": "^0.9.3"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@vitest/coverage-v8": "^2.0.0",
-    "typescript": "^5.7.0",
-    "vitest": "^2.0.0",
-    "eslint": "^9.0.0",
-    "prettier": "^3.0.0"
+    "@types/node": "26.4.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "typescript": "7.0.2",
+    "vitest": "^4.1.11",
+    "eslint": "^10.9.1",
+    "prettier": "^3.9.6"
   },
   "engines": {
     "node": ">=18"
